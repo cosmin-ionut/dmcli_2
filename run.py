@@ -4,13 +4,15 @@ from sys import modules
 from time import sleep
 from pieces.monitor_utils import environment_check
 from importlib import import_module
+from collections import defaultdict
+
 
 class dut_monitor():
     """ the main monitoring process.
         creates and manages worker objects.
     """
 
-    def __init__(self, function, dut_list = [], item_list = [], monitor_map = {}, **kwargs):
+    def __init__(self, function, dut_list = [], item_list = [], monitor_map = {}, detect_crashes = {}, **kwargs):
         
         # the type of monitoring
         self.worker_type = function # the type of the worker 
@@ -34,6 +36,9 @@ class dut_monitor():
                           # each instance of dut_monitor will create one TYPE of workers only.
                           # one worker will be created for each DUT. For instance, a dut_monitor object which monitors 3 DUTs via snmp, will create and manage 3 snmp workers, one for each DUT
                           # format: {'dut_1_ip' : worker1, 'dut_2_ip':worker2, 'dut_3_ip':worker3}
+        # use a separate crash_item for each dut
+        self.detect_crashes = defaultdict(lambda: False)
+        for dut, uptime_item in detect_crashes.items(): self.detect_crashes[dut] = uptime_item
         # kwargs is a dictionary of arguments which will be passed, or not, to the worker classes based on their implementation.
         self.kwargs = kwargs # a set of arguments which may or may not be passed to dut monitor. Used to provide worker-specific arguments.
 
@@ -113,14 +118,12 @@ class dut_monitor():
             self.dut_to_item_mapper()
             for dut, items in self.monitor_map.items():
                 # the type of the worker, dut's connection method (IP for snmp) and the itemlist to monitor must be passed. Then all the other worker-specific args
-                self.init_worker(typeof = getattr(modules[__name__], self.worker_type), dut = dut, item_list = items, kwargs = self.kwargs)
+                self.init_worker(typeof = getattr(modules[__name__], self.worker_type), dut = dut, item_list = items, uptime_item = self.detect_crashes[dut], kwargs = self.kwargs)
                 sleep(1)
         except KeyboardInterrupt:
             self.dut_monitor_logger.critical(f"DUT Monitor script closing with error.", extra={'entity': "DUT-MONITOR : run()"})
             self.stop_workers()
             exit(1)
-
-e = dut_monitor(function = 'console_monitor')
 
 '''   
 e = dut_monitor(monitor_map = {'telnet 10.2.36.236 5042':[('show sysinfo','Backplane Hardware Description'),('show sysinfo','System Up Time'),('show sysinfo','CPU Utilization'), ('show temperature','Lower Temperature Limit for Trap')],
@@ -160,7 +163,8 @@ e = dut_monitor(monitor_map = {'10.10.255.98':['sysUpTime.0','hm2DiagCpuAverageU
                 #dut_list=['15.1.1.50'], # devices monitored
                 #item_list=['.1.3.6.1.4.1.248.11.22.1.8.11.2.0','.1.3.6.1.4.1.248.11.22.1.8.10.1.0','.1.3.6.1.2.1.1.3.0', 'sysUpTime.0','hm2SfpInfoPartId.1'], # items monitored
                 statistics = True, # calculate min max and avg for each item monitored
-                detect_crashes=['.1.3.6.1.2.1.1.3.0', 'sysUpTime.0']) # try to detect DUT crashes. the item passed MUST be a DUT uptime item for this to work.
+                detect_crashes = {'10.10.255.98':'sysUpTime.0',
+                                  '10.10.255.42':'.1.3.6.1.2.1.1.3.0' }) # try to detect DUT crashes. the item passed MUST be a DUT uptime item for this to work.
 e.run()
 x = input('Press any key to stop') # the script stays blocked here until the user presses a key
 e.stop_workers() # I stop all workers ahead of time.

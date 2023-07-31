@@ -33,7 +33,7 @@ class snmp_monitor(Thread):
         self.iteration_number = 1 # the index of the iteration
         # end-thread functionalities
         self.statistics = kwargs['kwargs']['statistics'] if 'statistics' in kwargs['kwargs'] else False
-        self.detect_crashes = kwargs['kwargs']['detect_crashes'] if 'detect_crashes' in kwargs['kwargs'] else False
+        self.uptime_item = kwargs['uptime_item']
         # stop mechanism
         self.thread_sleep = Event()
         self.stopped = Event()   # | these two work the thread stop mechanism
@@ -70,8 +70,8 @@ class snmp_monitor(Thread):
             self.thread_sleep.wait(timeout=self.interval)
         if self.statistics:
             generate_statistics(logfile_path=self.logfile_path, item_list=self.item_list, pattern="\s\s[0-9a-zA-Z\-\.\\\/]+", worker_type='SNMP_MONITOR')
-        if self.detect_crashes:
-            crash_detector(logfile_path=self.logfile_path, uptime_pattern='\d+\:\d+\:\d+\:\d+', uptime_items=self.detect_crashes, worker_type='SNMP_MONITOR')
+        if self.uptime_item:
+            crash_detector(logfile_path=self.logfile_path, uptime_pattern='\d+\:\d+\:\d+\:\d+', uptime_item=self.uptime_item, worker_type='SNMP_MONITOR')
         self.stopped.set()
         
     def stop(self):
