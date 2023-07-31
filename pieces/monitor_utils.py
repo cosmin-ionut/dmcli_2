@@ -47,11 +47,11 @@ def generate_statistics(logfile_path: str, item_list: list, pattern: str, worker
             logs += f"INFO : {worker_type} : generate_statistics() - Statistics generated\n"
             logfile.write(logs)
 
-def crash_detector(logfile_path: str, uptime_pattern: str, uptime_items: list, worker_type: str = None) -> None:
+def crash_detector(logfile_path: str, uptime_pattern: str, uptime_item: str, worker_type: str = None) -> None:
         '''
         logfile_path : the path to the logfile that will be searched for crashes
         uptime_pattern : the regex pattern of the uptime value. Must match '0 days, 0:0:0' for CLI and '0:0:00:00.00' for snmp (-Oqvt)
-        uptime_items : a list of items that represent DUT's uptime. Example: System uptime (CLI), sysUpTime.0 (or OID equivalent)
+        uptime_item : the item that represent DUT's uptime.
         worker_type : only for logging purposes.
         '''
         logs = f'\nINFO : {worker_type} : crash_detector() - Started operation.\n'
@@ -61,17 +61,15 @@ def crash_detector(logfile_path: str, uptime_pattern: str, uptime_items: list, w
         # build a dictionary of {1: [logtime, uptime], iteration_number: [timedate_obj, seconds]}
         i = 1
         with open(logfile_path, 'r+', encoding='utf-8') as logfile:
-            for line in logfile:                                                          # | read each line in the logfile and if any of the uptime_items passed is on that line,
-                if any(f'| ITEM: {uptime_item}' in line for uptime_item in uptime_items): # | then try to retrieve the iteration timestamp and the uptime.
+            for line in logfile:
+                if f'| ITEM: {uptime_item}' in line: # | then try to retrieve the iteration timestamp and the uptime.
                     uptimes_dict[i] = []
                     try:
                         uptimes_dict[i].append(datetime.strptime(datetime_pattern.search(line).group(0), '%Y-%m-%d %H:%M:%S')) # get iteration uptime
-                        line_uptime = uptime_pattern.search(line).group(0)              # | get the uptime value based on uptime_pattern        
-                        uptime_parse_list = split('[\D\s]+', line_uptime)               # | split the value into a list of days hours minutes seconds
-                        k = 0                                                           # |
-                        for item in uptime_parse_list:                                  # | each item in list has any non-digit character removed and the list is rebuilt
-                            uptime_parse_list[k] = int(match('[\d\s]+', item).group(0)) # |
-                            k += 1                                                      # | the total number of seconds is then calculated
+                        line_uptime = uptime_pattern.search(line).group(0)                   # | get the uptime value based on uptime_pattern        
+                        uptime_parse_list = split('[\D\s]+', line_uptime)                    # | split the value into a list of days hours minutes seconds
+                        for index, item in enumerate(uptime_parse_list):                     # | each item in list has any non-digit character removed and the list is rebuilt
+                            uptime_parse_list[index] = int(match('[\d\s]+', item).group(0))  # | the total number of seconds is then calculated
                         uptimes_dict[i].append(86400*uptime_parse_list[0] + 3600*uptime_parse_list[1] + 60*uptime_parse_list[2] + uptime_parse_list[3])
                     except:
                         uptimes_dict[i].append('error')
@@ -100,7 +98,7 @@ def crash_detector(logfile_path: str, uptime_pattern: str, uptime_items: list, w
             logs += f"INFO : {worker_type} : crash_detector() - Operation finished."
             logfile.write(logs)
 
-# crash_detector() doesn't use the querying interval passed by the user. It iterates through the logfile and dynamically calculates the expected seconds based on the interval between two distict iterations.
+# crash_detector() iterates through the logfile and dynamically calculates the expected seconds based on the interval between two distict iterations.
 # thus, it takes into account both the interval between iterations AND the time needed for an iteration to complete, plus an error of 1 seconds. 
 # it is VERY dependant on the format of the logfile
 

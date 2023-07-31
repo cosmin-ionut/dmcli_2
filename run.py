@@ -41,7 +41,7 @@ class dut_monitor():
         for dut, uptime_item in detect_crashes.items(): self.detect_crashes[dut] = uptime_item
         # kwargs is a dictionary of arguments which will be passed, or not, to the worker classes based on their implementation.
         self.kwargs = kwargs # a set of arguments which may or may not be passed to dut monitor. Used to provide worker-specific arguments.
-
+    '''
     def dut_to_item_mapper(self):
         """ self.monitor_map is used to create workers.
             this function takes the dut_list and item_list lists and parses them into self.monitor_map dictionary
@@ -57,7 +57,7 @@ class dut_monitor():
             for dut in self.dut_list:
                 self.monitor_map[dut] = self.item_list
         self.dut_monitor_logger.info(f"Mapper operation successful", extra={'entity': "DUT-MONITOR : dut_to_item_mapper()"})
-
+    '''
     def stop_workers(self):
         '''
         stop all workers.
@@ -71,17 +71,17 @@ class dut_monitor():
                 self.workers[dut].stopped.wait()
             self.dut_monitor_logger.info(f"DUT {dut} {self.worker_type.upper()} worker finished execution.", extra={'entity': "DUT-MONITOR : stop_workers()"})
 
-    def init_worker(self, typeof, **kwargs):
+    def init_worker(self, profile: dict) -> None:
         try:
-            self.dut_monitor_logger.info(f"Trying to create {self.worker_type} type worker for DUT {kwargs['dut']}", extra={'entity': "DUT-MONITOR : init_worker()"})
-            if kwargs['dut'] in self.workers:
-                self.dut_monitor_logger.warning(f"A worker for DUT {kwargs['dut']} already exists. Skip the initialization process.", extra={'entity': "DUT-MONITOR : init_worker()"})
-                return
-            self.workers[kwargs['dut']] = typeof(**kwargs)
-            self.workers[kwargs['dut']].start()
-            self.dut_monitor_logger.info(f"{self.worker_type} worker for DUT {kwargs['dut']} created and started", extra={'entity': "DUT-MONITOR : init_worker()"})
+            self.dut_monitor_logger.info(f"Trying to create {self.worker_type} type worker for DUT {profile['dut']}", extra={'entity': "DUT-MONITOR : init_worker()"})
+            if profile['dut'] in self.workers:
+                self.dut_monitor_logger.warning(f"A worker for DUT {profile['dut']} already exists. Skip the initialization process.", extra={'entity': "DUT-MONITOR : init_worker()"})
+                return None
+            self.workers[profile['dut']] = getattr(modules[__name__], self.worker_type)
+            self.workers[profile['dut']].start()
+            self.dut_monitor_logger.info(f"{self.worker_type} worker for DUT {profile['dut']} created and started", extra={'entity': "DUT-MONITOR : init_worker()"})
         except Exception as e:
-            self.dut_monitor_logger.critical(f"Error: {e} occurred while trying to initialize {self.worker_type} worker for DUT {kwargs['dut']}", extra={'entity': "DUT-MONITOR : init_worker()"})
+            self.dut_monitor_logger.critical(f"Error: {e} occurred while trying to initialize {self.worker_type} worker for DUT {profile['dut']}", extra={'entity': "DUT-MONITOR : init_worker()"})
             
     def logger_configurator(self) -> None:
         try:
@@ -115,10 +115,9 @@ class dut_monitor():
         self.dut_monitor_logger.info(f"Operation started", extra={'entity': "DUT-MONITOR : run()"})
         self.kwargs['start_time'] = self.start_time # pass the start time to all types of workers for synchronization purposes
         try:
-            self.dut_to_item_mapper()
-            for dut, items in self.monitor_map.items():
-                # the type of the worker, dut's connection method (IP for snmp) and the itemlist to monitor must be passed. Then all the other worker-specific args
-                self.init_worker(typeof = getattr(modules[__name__], self.worker_type), dut = dut, item_list = items, uptime_item = self.detect_crashes[dut], kwargs = self.kwargs)
+            #self.dut_to_item_mapper()
+            for profile in self.monitor_map:
+                self.init_worker(profile)
                 sleep(1)
         except KeyboardInterrupt:
             self.dut_monitor_logger.critical(f"DUT Monitor script closing with error.", extra={'entity': "DUT-MONITOR : run()"})
@@ -141,6 +140,19 @@ e.run()
 x = input('Press any key to stop') # the script stays blocked here until the user presses a key
 e.stop_workers() # I stop all workers ahead of time.
 
+the format of dut_monitor must be:
+dut_monitor(monitor_map = {dut:dut1, function:, profile:{'items':[],
+                                'function':'function',
+                                'interval':'interval',
+                                'timeout':'timeout',
+                                kwargs:{detect_crashes:{},statistics:bool}
+                                },
+                           dut2:{'items':[],
+                                'function':'function',
+                                'interval':'interval',
+                                'timeout':'timeout',
+                                kwargs:{detect_crashes:{},statistics:bool}
+                                }})
             
 
 e = dut_monitor(monitor_map = {'10.10.255.98':['sysUpTime.0','hm2DiagCpuAverageUtilization.0','hm2DiagMemoryRamFree.0'],
