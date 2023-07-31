@@ -5,6 +5,7 @@ from time import sleep
 from pieces.monitor_utils import environment_check
 from importlib import import_module
 from collections import defaultdict
+from pieces.snmp_monitor import snmp_monitor
 
 
 class dut_monitor():
@@ -12,20 +13,20 @@ class dut_monitor():
         creates and manages worker objects.
     """
 
-    def __init__(self, function, dut_list = [], item_list = [], monitor_map = {}, detect_crashes = {}, **kwargs):
+    def __init__(self, monitor_map: tuple):
         
         # the type of monitoring
-        self.worker_type = function # the type of the worker 
-
+        #self.worker_type = function # the type of the worker 
+        '''
         passed, message = environment_check(function = self.worker_type)
         if not passed:
             print(f'Environment check failed with error: {message}')
             exit(1)
         self.function = import_module(f'pieces.{self.worker_type}')
-
+        '''
         # define what will be monitored
-        self.dut_list = dut_list # the list of devices under monitoring
-        self.item_list = item_list # the list of items (oids/mibs/cli commands) from which information will be retrieved (monitored).
+        #self.dut_list = dut_list # the list of devices under monitoring
+        #self.item_list = item_list # the list of items (oids/mibs/cli commands) from which information will be retrieved (monitored).
         # when dut_list and item_list are used, each item from the item_list will be monitored for each DUT in dut_list.
         self.monitor_map = monitor_map # dictionary. a user-defined mapping between DUTs and items to be monitored
                                        # allows separate items to be monitored for each individual DUT, as desired
@@ -37,10 +38,10 @@ class dut_monitor():
                           # one worker will be created for each DUT. For instance, a dut_monitor object which monitors 3 DUTs via snmp, will create and manage 3 snmp workers, one for each DUT
                           # format: {'dut_1_ip' : worker1, 'dut_2_ip':worker2, 'dut_3_ip':worker3}
         # use a separate crash_item for each dut
-        self.detect_crashes = defaultdict(lambda: False)
-        for dut, uptime_item in detect_crashes.items(): self.detect_crashes[dut] = uptime_item
+        #self.detect_crashes = defaultdict(lambda: False)
+        #for dut, uptime_item in detect_crashes.items(): self.detect_crashes[dut] = uptime_item
         # kwargs is a dictionary of arguments which will be passed, or not, to the worker classes based on their implementation.
-        self.kwargs = kwargs # a set of arguments which may or may not be passed to dut monitor. Used to provide worker-specific arguments.
+        #self.kwargs = kwargs # a set of arguments which may or may not be passed to dut monitor. Used to provide worker-specific arguments.
     '''
     def dut_to_item_mapper(self):
         """ self.monitor_map is used to create workers.
@@ -73,15 +74,15 @@ class dut_monitor():
 
     def init_worker(self, profile: dict) -> None:
         try:
-            self.dut_monitor_logger.info(f"Trying to create {self.worker_type} type worker for DUT {profile['dut']}", extra={'entity': "DUT-MONITOR : init_worker()"})
+            self.dut_monitor_logger.info(f"Trying to create {profile['function']} type worker for DUT {profile['dut']}", extra={'entity': "DUT-MONITOR : init_worker()"})
             if profile['dut'] in self.workers:
                 self.dut_monitor_logger.warning(f"A worker for DUT {profile['dut']} already exists. Skip the initialization process.", extra={'entity': "DUT-MONITOR : init_worker()"})
                 return None
-            self.workers[profile['dut']] = getattr(modules[__name__], self.worker_type)
+            self.workers[profile['dut']] = getattr(modules[__name__], profile['function'])(profile)
             self.workers[profile['dut']].start()
-            self.dut_monitor_logger.info(f"{self.worker_type} worker for DUT {profile['dut']} created and started", extra={'entity': "DUT-MONITOR : init_worker()"})
+            self.dut_monitor_logger.info(f"{profile['function']} worker for DUT {profile['dut']} created and started", extra={'entity': "DUT-MONITOR : init_worker()"})
         except Exception as e:
-            self.dut_monitor_logger.critical(f"Error: {e} occurred while trying to initialize {self.worker_type} worker for DUT {profile['dut']}", extra={'entity': "DUT-MONITOR : init_worker()"})
+            self.dut_monitor_logger.critical(f"Error: {e} occurred while trying to initialize {profile['function']} worker for DUT {profile['dut']}", extra={'entity': "DUT-MONITOR : init_worker()"})
             
     def logger_configurator(self) -> None:
         try:
@@ -110,19 +111,39 @@ class dut_monitor():
             self.dut_monitor_logger.info(f"DUT {dut} {self.worker_type.upper()} worker finished its activity.", extra={'entity': "DUT-MONITOR : join_workers()"})
             
     def run(self) -> None:
+        '''
+        Method called to start the all the workers configured in monitor_map.
+        Basically, this is the method that starts the monitor app.
+        '''
         self.start_time = datetime.now()
         self.logger_configurator()
         self.dut_monitor_logger.info(f"Operation started", extra={'entity': "DUT-MONITOR : run()"})
-        self.kwargs['start_time'] = self.start_time # pass the start time to all types of workers for synchronization purposes
         try:
-            #self.dut_to_item_mapper()
             for profile in self.monitor_map:
-                self.init_worker(profile)
+                # pass the start time to all types of workers for synchronization purposes
+                profile['start_time'] = self.start_time
+                self.init_worker(profile=profile)
                 sleep(1)
         except KeyboardInterrupt:
             self.dut_monitor_logger.critical(f"DUT Monitor script closing with error.", extra={'entity': "DUT-MONITOR : run()"})
             self.stop_workers()
             exit(1)
+
+e = dut_monitor(monitor_map=({'dut':'192.168.1.1', 
+                              'function':'snmp_monitor',
+                              'items':['sysUpTime.0','hm2SfpInfoPartId.1'],
+                              'interval':5,
+                              'timeout':10000,
+                              'statistics':True,
+                              'detect_crashes':'sysUpTime.0'},
+                              {'dut':'10.14.211.2', 
+                              'function':'snmp_monitor',
+                              'items':['sysUpTime.0','hm2SfpInfoPartId.1','.1.3.6.1.4.1.248.11.22.1.8.10.1.0'],
+                              'interval':145,
+                              'timeout':80,
+                              'statistics':False,
+                              'detect_crashes':'hm2SfpInfoPartId.1'}))
+#e.run()
 
 '''   
 e = dut_monitor(monitor_map = {'telnet 10.2.36.236 5042':[('show sysinfo','Backplane Hardware Description'),('show sysinfo','System Up Time'),('show sysinfo','CPU Utilization'), ('show temperature','Lower Temperature Limit for Trap')],
