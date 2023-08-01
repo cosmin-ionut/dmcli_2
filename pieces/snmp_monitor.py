@@ -9,31 +9,31 @@ class snmp_monitor(Thread):
     Each thread (called snmp worker/oid_inspector worker) inspects a set of OIDs for a single IP. 
     '''
 
-    def __init__(self, dut, item_list, **kwargs):
+    def __init__(self, profile):
 
         Thread.__init__(self)
         
         # time settings and default values
-        self.seconds = kwargs['kwargs']['seconds'] if 'seconds' in kwargs['kwargs'] else 30
-        self.interval = kwargs['kwargs']['interval'] if 'interval' in kwargs['kwargs'] else 5
-        self.start_time = kwargs['kwargs']['start_time']
-        self.endtime = self.start_time + timedelta(seconds=self.seconds) # set the endtime of the whole monitoring process 
+        self.timeout = profile['timeout']
+        self.interval = profile['interval']
+        self.start_time = profile['start_time']
+        self.endtime = self.start_time + timedelta(seconds=self.timeout) # set the endtime of the whole monitoring process 
 
         # logfile configuration
-        self.logfile_path = f"logfile_{dut}_{self.start_time.strftime('%d_%b_%Y_%H_%M_%S')}.log"
-        self.logger = logging.getLogger(dut)
+        self.logfile_path = f"logfile_{profile['dut']}_{self.start_time.strftime('%d_%b_%Y_%H_%M_%S')}.log"
+        self.logger = logging.getLogger(profile['dut'])
         self.logger.setLevel(logging.DEBUG)
         logfile_handler = logging.FileHandler(self.logfile_path)
         fmt = logging.Formatter('%(asctime)s | %(message)s')
         logfile_handler.setFormatter(fmt)
         self.logger.addHandler(logfile_handler)
         # other settings
-        self.dut_ip = dut # the IP of the DUT
-        self.item_list = list(set(item_list)) # can contain either OIDs or MIBs. The conversion is done to remove duplicate items
+        self.dut_ip = profile['dut'] # the IP of the DUT
+        self.item_list = list(set(profile['items'])) # can contain either OIDs or MIBs. The conversion is done to remove duplicate items
         self.iteration_number = 1 # the index of the iteration
         # end-thread functionalities
-        self.statistics = kwargs['kwargs']['statistics'] if 'statistics' in kwargs['kwargs'] else False
-        self.uptime_item = kwargs['uptime_item']
+        self.statistics = profile['statistics'] if 'statistics' in profile else False
+        self.uptime_item = profile['detect_crashes'] if 'detect_crashes' in profile else False
         # stop mechanism
         self.thread_sleep = Event()
         self.stopped = Event()   # | these two work the thread stop mechanism
