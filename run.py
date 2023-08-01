@@ -4,7 +4,6 @@ from sys import modules
 from time import sleep
 from pieces.monitor_utils import environment_check
 from importlib import import_module
-from collections import defaultdict
 from pieces.snmp_monitor import snmp_monitor
 
 
@@ -13,8 +12,7 @@ class dut_monitor():
         creates and manages worker objects.
     """
 
-    def __init__(self, monitor_map: tuple):
-
+    def __init__(self, monitor_map: list):
         '''
         passed, message = environment_check(function = self.worker_type)
         if not passed:
@@ -23,15 +21,22 @@ class dut_monitor():
         self.function = import_module(f'pieces.{self.worker_type}')
         '''
 
+        self.start_time = datetime.now()
+        self.logger_configurator()
+
+        if not isinstance(monitor_map, list):
+            self.dut_monitor_logger.critical(f"The profiles must be passed to dut_monitor in a list. dut_monitor process will exit", extra={'entity': "DUT-MONITOR : __init__()"})
+            exit(1)
+
         self.monitor_map = monitor_map 
         self.workers = {} # the dictionary of workers
-
 
     def profile_check(self, profile: dict) -> bool:
         """ 
         Method that checks that the mandatory parameters needed to start the monitor,
          are present in the profile passed by the user.
         """
+
         mandatory_params = ['dut', 'function', 'items', 'interval', 'timeout']
         current_params = list(profile.keys())
 
@@ -45,11 +50,12 @@ class dut_monitor():
 
     def stop_workers(self, dut: str) -> None:
         '''
-        Method that signals one or all worker threads to stop. The method waits for the signaled threads to terminate.
+            Method that signals one or all worker threads to stop. The method waits for the signaled threads to terminate.
+            :dut: the ip | cli of an worker, or 'all'
         '''
 
         if dut != 'all' and dut not in self.workers:
-            self.dut_monitor_logger.error(f"There is no worker alive for '{dut}'", extra={'entity': "DUT-MONITOR : stop_workers()"})
+            self.dut_monitor_logger.error(f"There is no worker for '{dut}'", extra={'entity': "DUT-MONITOR : stop_workers()"})
             return False
 
         duts = list(self.workers.keys()) if dut == 'all' else [dut]
@@ -57,11 +63,11 @@ class dut_monitor():
         for dut in duts:
             self.dut_monitor_logger.info(f"Now stopping {dut}'s worker", extra={'entity': "DUT-MONITOR : stop_workers()"})
             self.workers[dut].stop()
-            self.dut_monitor_logger.info(f"Stop command sent to DUT {dut} {self.worker_type.upper()} worker", extra={'entity': "DUT-MONITOR : stop_workers()"})
+            self.dut_monitor_logger.info(f"Stop command sent to DUT {dut} {self.workers[dut].function} worker", extra={'entity': "DUT-MONITOR : stop_workers()"})
         for dut in duts:
             if self.workers[dut].is_alive():
                 self.workers[dut].stopped.wait()
-            self.dut_monitor_logger.info(f"DUT {dut} {self.worker_type.upper()} worker finished execution.", extra={'entity': "DUT-MONITOR : stop_workers()"})
+            self.dut_monitor_logger.info(f"DUT {dut} {self.workers[dut].function} worker terminated execution.", extra={'entity': "DUT-MONITOR : stop_workers()"})
 
     def init_worker(self, profile: dict) -> None:
         try:
@@ -97,18 +103,19 @@ class dut_monitor():
         '''
             Wrapper method over Thread.join() that allows one or all worker threads to be join()ed to the calling thread.
             If used with stop_workers(), be advised that stop_workers() has its own mechanism to wait until the worker terminates. 
-            :worker: the ip | cli of an worker, or 'all'
+            :dut: the ip | cli of an worker, or 'all'
         '''
         if dut != 'all' and dut not in self.workers:
-            self.dut_monitor_logger.error(f"There is no monitoring process alive for '{dut}'", extra={'entity': "DUT-MONITOR : join_workers()"})
+            self.dut_monitor_logger.error(f"There is no monitoring process for '{dut}'", extra={'entity': "DUT-MONITOR : join_workers()"})
             return False
 
         duts = list(self.workers.keys()) if dut == 'all' else [dut]
 
         for dut in duts:
-            self.dut_monitor_logger.info(f"Now joining {self.workers['dut'].function} worker of DUT {dut}", extra={'entity': "DUT-MONITOR : join_workers()"})
+
+            self.dut_monitor_logger.info(f"Now joining {self.workers[dut].function} worker of DUT {dut}", extra={'entity': "DUT-MONITOR : join_workers()"})
             self.workers[dut].join(timeout=timeout)
-            self.dut_monitor_logger.info(f"DUT {dut} {self.workers['dut'].function} worker finished its activity or the timeout expired.", 
+            self.dut_monitor_logger.info(f"DUT {dut} {self.workers[dut].function} worker finished its activity or the timeout expired.", 
                                          extra={'entity': "DUT-MONITOR : join_workers()"})
         return True
             
@@ -117,15 +124,13 @@ class dut_monitor():
         Method called to start the all the workers configured in monitor_map.
         Basically, this is the method that starts the monitor app.
         '''
-        self.start_time = datetime.now()
-        self.logger_configurator()
         self.dut_monitor_logger.info(f"Operation started", extra={'entity': "DUT-MONITOR : run()"})
         try:
             for profile in self.monitor_map:
-                # pass the start time to all types of workers for synchronization purposes
                 if not self.profile_check(profile):
                     self.dut_monitor_logger.error(f"Profile {profile} failed the check, thus it is skipped.", extra={'entity': "DUT-MONITOR : run()"})
                     continue
+                # pass the start time to all types of workers for synchronization purposes
                 profile['start_time'] = self.start_time
                 self.init_worker(profile=profile)
                 sleep(1)
@@ -134,21 +139,28 @@ class dut_monitor():
             self.stop_workers()
             exit(1)
 
-e = dut_monitor(monitor_map=({'dut':'192.168.1.1', 
+e = dut_monitor(monitor_map=[{'dut':'16.1.1.10', 
+                              'function':'snmp_monitor',
+                              'items':['sysUpTime.0','hm2SfpInfoPartId.1'],
+                              'interval':30,
+                              'timeout':1000},
+                             {'dut':'16.1.1.10', 
                               'function':'snmp_monitor',
                               'items':['sysUpTime.0','hm2SfpInfoPartId.1'],
                               'interval':5,
-                              'timeout':10000,
-                              'statistics':True,
-                              'detect_crashes':'sysUpTime.0'},
-                              {'dut':'10.14.211.2', 
-                              'function':'snmp_monitor',
-                              'items':['sysUpTime.0','hm2SfpInfoPartId.1','.1.3.6.1.4.1.248.11.22.1.8.10.1.0'],
-                              'interval':145,
-                              'timeout':80,
-                              'statistics':False,
-                              'detect_crashes':'hm2SfpInfoPartId.1'}))
+                              'timeout':40}])
+                              #'statistics':True,
+                              #'detect_crashes':'sysUpTime.0'},
+                              #{'dut':'10.14.211.2', 
+                              #'function':'snmp_monitor',
+                              #'items':['sysUpTime.0','hm2SfpInfoPartId.1','.1.3.6.1.4.1.248.11.22.1.8.10.1.0'],
+                              #'interval':145,
+                              #'timeout':80,
+                              #'statistics':False,
+                              #'detect_crashes':'hm2SfpInfoPartId.1'}))
 e.run()
+sleep(10)
+e.stop_workers(dut = 'all')
 
 '''   
 e = dut_monitor(monitor_map = {'telnet 10.2.36.236 5042':[('show sysinfo','Backplane Hardware Description'),('show sysinfo','System Up Time'),('show sysinfo','CPU Utilization'), ('show temperature','Lower Temperature Limit for Trap')],
