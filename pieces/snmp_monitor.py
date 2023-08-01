@@ -9,7 +9,7 @@ class snmp_monitor(Thread):
     Each thread (called snmp worker/oid_inspector worker) inspects a set of OIDs for a single IP. 
     '''
 
-    def __init__(self, profile):
+    def __init__(self, profile: dict) -> None:
 
         Thread.__init__(self)
         

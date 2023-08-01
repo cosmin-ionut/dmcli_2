@@ -9,19 +9,19 @@ from pieces.monitor_utils import generate_statistics, crash_detector
 
 class console_monitor(Thread):
     
-    def __init__(self, dut, item_list, **kwargs):
+    def __init__(self, profile: dict) -> None:
 
         Thread.__init__(self)
         
         # time settings and default values
-        self.seconds = kwargs['kwargs']['seconds'] if 'seconds' in kwargs['kwargs'] else 30
-        self.interval = kwargs['kwargs']['interval'] if 'interval' in kwargs['kwargs'] else 5
-        self.start_time = kwargs['kwargs']['start_time']
-        self.endtime = self.start_time + timedelta(seconds=self.seconds) # set the endtime of the whole monitoring process 
+        self.timeout = profile['timeout']
+        self.interval = profile['interval']
+        self.start_time = profile['start_time']
+        self.endtime = self.start_time + timedelta(seconds=self.timeout) # set the endtime of the whole monitoring process 
 
         #logfile configuration
-        self.logfile_path = f"logfile_cli_{dut.replace(' ','_')}_{self.start_time.strftime('%d_%b_%Y_%H_%M_%S')}.log"
-        self.logger = logging.getLogger(f"{dut.replace(' ','_')}_cli")
+        self.logfile_path = f"logfile_cli_{profile['dut'].replace(' ','_')}_{self.start_time.strftime('%d_%b_%Y_%H_%M_%S')}.log"
+        self.logger = logging.getLogger(f"{profile['dut'].replace(' ','_')}_cli")
         self.logger.setLevel(logging.DEBUG)
         logfile_handler = logging.FileHandler(self.logfile_path)
         fmt = logging.Formatter('%(asctime)s | %(message)s')
@@ -29,19 +29,19 @@ class console_monitor(Thread):
         self.logger.addHandler(logfile_handler)
 
         # other settings
-        self.dut_cli = dut # the ser2net console of the DUT | telnet localhost 30000
-        self.item_list = list(set(item_list)) # can contain either OIDs or MIBs. The conversion is done to remove duplicate items
+        self.dut_cli = profile['dut'] # the ser2net console of the DUT | telnet localhost 30000
+        self.item_list = list(set(profile['items'])) # can contain either OIDs or MIBs. The conversion is done to remove duplicate items
         #self.item_list = item_list
         self.iteration_number = 1 # the index of the iteration
         self.connection = False
         self.error_counter = 0
         # end-thread functionalities
-        self.statistics = kwargs['kwargs']['statistics'] if 'statistics' in kwargs['kwargs'] else False
+        self.statistics = profile['statistics'] if 'statistics' in profile else False
         if self.statistics:
             self.statistics_list = []
             for item in self.item_list:
                 self.statistics_list.append(item[1])
-        self.detect_crashes = kwargs['kwargs']['detect_crashes'] if 'detect_crashes' in kwargs['kwargs'] else False
+        self.detect_crashes = profile['detect_crashes'] if 'detect_crashes' in profile else False
         # stop mechanism
         self.thread_sleep = Event()
         self.stopped = Event()   # | these two work the thread stop mechanism
