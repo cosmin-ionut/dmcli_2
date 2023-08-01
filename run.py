@@ -4,12 +4,12 @@ from sys import modules
 from time import sleep
 from pieces.monitor_utils import environment_check
 from importlib import import_module
-from pieces.snmp_monitor import snmp_monitor
 
 
 class dut_monitor():
-    """ the main monitoring process.
-        creates and manages worker objects.
+    """ 
+        The main DUT monitor class.
+        It's purpose is to create and manage worker thread objects.
     """
 
     def __init__(self, monitor_map: list) -> None:
@@ -23,16 +23,19 @@ class dut_monitor():
 
         # check that the profiles are correctly passed to the monitor
         if not isinstance(monitor_map, list):
-            self.dut_monitor_logger.critical(f"The profiles must be passed to dut_monitor in a list. dut_monitor process will exit", extra={'entity': "DUT-MONITOR : __init__()"})
+            self.dut_monitor_logger.critical(f"The profiles must be passed to dut_monitor in a list. dut_monitor process will exit",
+                                              extra={'entity': "DUT-MONITOR : __init__()"})
             exit(1)
         
-        # check that the environment requirements are met
-        for function in set([k['function'] for k in monitor_map]):  
+        # check that the environment requirements are met and perform the module imports
+        #  based on the functions that the profile uses
+        for function in {profile['function'] for profile in monitor_map}:  
             passed, message = environment_check(function = function)
             if not passed:
-                print(f'Environment check failed with error: {message}')
+                self.dut_monitor_logger.critical(f"Environment check failed with error: {message}",
+                                              extra={'entity': "DUT-MONITOR : __init__()"})
                 exit(1)
-            self.function = import_module(f'pieces.{self.worker_type}')
+            self.function = import_module(f'pieces.{function}')
 
         self.monitor_map = monitor_map 
         self.workers = {} # the dictionary of workers
@@ -141,7 +144,7 @@ class dut_monitor():
                 self.init_worker(profile=profile)
                 sleep(1)
         except KeyboardInterrupt:
-            self.dut_monitor_logger.critical(f"DUT Monitor script closing with error.", extra={'entity': "DUT-MONITOR : run()"})
+            self.dut_monitor_logger.critical(f"DUT Monitor closing due to KeyboardInterrupt.", extra={'entity': "DUT-MONITOR : run()"})
             self.stop_workers()
             exit(1)
 
