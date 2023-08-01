@@ -12,21 +12,27 @@ class dut_monitor():
         creates and manages worker objects.
     """
 
-    def __init__(self, monitor_map: list):
-        '''
-        passed, message = environment_check(function = self.worker_type)
-        if not passed:
-            print(f'Environment check failed with error: {message}')
-            exit(1)
-        self.function = import_module(f'pieces.{self.worker_type}')
+    def __init__(self, monitor_map: list) -> None:
         '''
 
+        '''
+        
+        # generate a start time for sync purposes and configure the logger
         self.start_time = datetime.now()
         self.logger_configurator()
 
+        # check that the profiles are correctly passed to the monitor
         if not isinstance(monitor_map, list):
             self.dut_monitor_logger.critical(f"The profiles must be passed to dut_monitor in a list. dut_monitor process will exit", extra={'entity': "DUT-MONITOR : __init__()"})
             exit(1)
+        
+        # check that the environment requirements are met
+        for function in set([k['function'] for k in monitor_map]):  
+            passed, message = environment_check(function = function)
+            if not passed:
+                print(f'Environment check failed with error: {message}')
+                exit(1)
+            self.function = import_module(f'pieces.{self.worker_type}')
 
         self.monitor_map = monitor_map 
         self.workers = {} # the dictionary of workers
