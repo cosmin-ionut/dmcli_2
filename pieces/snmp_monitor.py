@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from threading import Thread, Event
 from subprocess import run as run_proc
 import logging
-from pieces.monitor_utils import generate_statistics, crash_detector
+from pieces.monitor_utils import monitor_utils
 
 class snmp_monitor(Thread):
     '''
@@ -35,6 +35,7 @@ class snmp_monitor(Thread):
         # end-thread functionalities
         self.statistics = profile['statistics'] if 'statistics' in profile else False
         self.uptime_item = profile['detect_crashes'] if 'detect_crashes' in profile else False
+        self.utils = monitor_utils()
         # stop mechanism
         self.thread_sleep = Event()
         self.stopped = Event()   # | these two work the thread stop mechanism
@@ -70,9 +71,11 @@ class snmp_monitor(Thread):
             self.iteration_number += 1
             self.thread_sleep.wait(timeout=self.interval)
         if self.statistics:
-            generate_statistics(logfile_path=self.logfile_path, item_list=self.item_list, pattern="\s\s[0-9a-zA-Z\-\.\\\/]+", worker_type='SNMP_MONITOR')
+            self.utils.generate_statistics(logfile_path=self.logfile_path, item_list=self.statistics,
+                                           pattern="\s\s[0-9a-zA-Z\-\.\\\/]+", worker_type='SNMP_MONITOR')
         if self.uptime_item:
-            crash_detector(logfile_path=self.logfile_path, uptime_pattern='\d+\:\d+\:\d+\:\d+', uptime_item=self.uptime_item, worker_type='SNMP_MONITOR')
+            self.utils.crash_detector(logfile_path=self.logfile_path, uptime_pattern='\d+\:\d+\:\d+\:\d+', 
+                                      uptime_item=self.uptime_item, worker_type='SNMP_MONITOR')
         self.stopped.set()
         
     def stop(self):

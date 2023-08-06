@@ -2,7 +2,7 @@ from datetime import datetime
 import logging
 from sys import modules
 from time import sleep
-from pieces.monitor_utils import environment_check
+from pieces.monitor_utils import monitor_utils
 from importlib import import_module
 
 
@@ -29,8 +29,9 @@ class dut_monitor():
         
         # check that the environment requirements are met and perform the module imports
         #  based on the functions that the profile uses
+        utils = monitor_utils()
         for function in {profile['function'] for profile in monitor_map}:  
-            passed, message = environment_check(function = function)
+            passed, message = utils.environment_check(function = function)
             if not passed:
                 self.dut_monitor_logger.critical(f"Environment check failed with error: {message}",
                                               extra={'entity': "DUT-MONITOR : __init__()"})
@@ -149,7 +150,7 @@ class dut_monitor():
             exit(1)
 
 e = dut_monitor(monitor_map=[{'dut':'16.1.1.10', 
-                              'function':'snmp_monitor',
+                              'function':'console_monitor',
                               'items':['sysUpTime.0','hm2SfpInfoPartId.1'],
                               'interval':30,
                               'timeout':1000},
@@ -158,7 +159,7 @@ e = dut_monitor(monitor_map=[{'dut':'16.1.1.10',
                               'items':['sysUpTime.0','hm2SfpInfoPartId.1'],
                               'interval':5,
                               'timeout':40}])
-                              #'statistics':True,
+                              #'statistics':['sysUpTime.0','hm2SfpInfoPartId.1'],
                               #'detect_crashes':'sysUpTime.0'},
                               #{'dut':'10.14.211.2', 
                               #'function':'snmp_monitor',
