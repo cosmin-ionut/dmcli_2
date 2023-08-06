@@ -85,9 +85,8 @@ class monitor_utils():
                 #timestamp_list, values_list = zip(*[(timestamp, int(value)) for timestamp, value in self.parsed_items_dict[item] if value != 'error'])
 
                 try:
-                    minimum = (min(values_list), timestamp_list[values_list.index(min(values_list))])
-                    # min_value, min_timestamp = min(zip(values_list, timestamp_list), key=lambda pair: pair[0])
-                    maximum = (max(values_list), timestamp_list[values_list.index(max(values_list))])
+                    minimum = min(zip(values_list, timestamp_list), key=lambda pair: pair[0])
+                    maximum = max(zip(values_list, timestamp_list), key=lambda pair: pair[0])
                     average = mean(values_list)
                     med = median(values_list)
                     mmode = multimode(values_list)
@@ -105,21 +104,22 @@ class monitor_utils():
             with open(logfile_path, 'a+', encoding='utf-8') as logfile:
                 logfile.write(logs)
 
-    def crash_detector(self, logfile_path: str, uptime_pattern: str, uptime_item: str, worker_type: str = 'undefined') -> None:
+    def crash_detector(self, logfile_path: str, pattern: str, item: str, worker_type: str = 'undefined') -> None:
             '''
+            Checks wheter a crash has occurred by comparing the expected uptime and actual uptime, based on the timestamps when these values were retrieved.
             logfile_path : the path to the logfile that will be searched for crashes
-            uptime_pattern : the regex pattern of the uptime value. Must match '0 days, 0:0:0' for CLI and '0:0:00:00.00' for snmp (-Oqvt)
-            uptime_item : the item that represent DUT's uptime.
+            pattern : the regex pattern of the uptime value. Must match '0 days, 0:0:0' for CLI and '0:0:00:00.00' for snmp (-Oqvt)
+            item : the item that represent DUT's uptime (sysUpTime.0 for example).
             worker_type : only for logging purposes.
             '''
 
-            self.parse_logfile(logfile_path=logfile_path, item_list=[uptime_item], pattern=uptime_pattern, worker_type = worker_type)
+            self.parse_logfile(logfile_path=logfile_path, item_list=[item], pattern=pattern, worker_type = worker_type)
 
             logs = f'\nINFO : {worker_type} : crash_detector() - Started operation.\n'
     
             uptimes_dict = {}
 
-            for iteration, time_tup in enumerate(self.parsed_items_dict[uptime_item], start=1):
+            for iteration, time_tup in enumerate(self.parsed_items_dict[item], start=1):
                 try:
                     uptime_parse_list = split('[\D\s]+', time_tup[1])
                     uptime_parse_list = [int(''.join(char for char in element if char.isdigit())) for element in uptime_parse_list]
