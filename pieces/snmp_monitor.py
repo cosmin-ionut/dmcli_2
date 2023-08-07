@@ -33,9 +33,10 @@ class snmp_monitor(Thread):
         self.item_list = list(set(profile['items'])) # can contain either OIDs or MIBs. The conversion is done to remove duplicate items
         self.iteration_number = 1 # the index of the iteration
         # end-thread functionalities
-        self.statistics = profile['statistics'] if 'statistics' in profile else False
-        self.uptime_item = profile['detect_crashes'] if 'detect_crashes' in profile else False
-        self.utils = monitor_utils()
+        # vezi cum faci sa trimiti self.parse_items la aia
+        self.statistics = {item: compile("\s\s[0-9a-zA-Z\-\.\\\/]+") for item in profile['statistics']} if 'statistics' in profile else False
+        self.uptime_item = {profile['detect_crashes']: compile('\d+\:\d+\:\d+\:\d+')} if 'detect_crashes' in profile else False
+        self.utils = monitor_utils(parse_item = self.statistics)
         # stop mechanism
         self.thread_sleep = Event()
         self.stopped = Event()   # | these two work the thread stop mechanism

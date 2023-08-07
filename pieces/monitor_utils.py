@@ -9,8 +9,9 @@ from statistics import median, mean, multimode
 
 class monitor_utils():
 
-    def __init__(self):
+    def __init__(self, **kwargs):
 
+        self.kwargs = kwargs
         self.parsed_items_dict = defaultdict(list)
 
 
@@ -25,6 +26,8 @@ class monitor_utils():
         """
 
         logs = f'\nINFO : {worker_type} : parse_logfile() - Checking the items to parse.\n'
+
+        # daca exita parse_items in self.kwargs atunci foloseste-i pe aia
         
         # check whether there are any items to parse (not already parsed) and:
         #  if there aren't any, open the file in append and write the log messages at the bottom
