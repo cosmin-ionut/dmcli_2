@@ -10,12 +10,14 @@ from statistics import median, mean, multimode
 class monitor_utils():
 
     def __init__(self, **kwargs):
+        '''
+        self.kwargs is an argument use to provide additional functionality to the methods
+        '''
 
         self.kwargs = kwargs
         self.parsed_items_dict = defaultdict(list)
 
-
-    def parse_logfile(self, logfile_path: str, item_list: list, pattern: str, worker_type: str = 'undefined') -> None:
+    def parse_logfile(self, logfile_path: str, item_dict: dict, worker_type: str = 'undefined') -> None:
         """
         Parses the logfile and populates a dictionary of {item_1:(timestamp, value), item_2:(timestamp, value), item_3:(timestamp, 'error')}
         If a value can't be retrieved based on the regex pattern provided
@@ -27,13 +29,14 @@ class monitor_utils():
 
         logs = f'\nINFO : {worker_type} : parse_logfile() - Checking the items to parse.\n'
 
-        # daca exita parse_items in self.kwargs atunci foloseste-i pe aia
+        # if there are any items in self.kwargs['parse_items'] then use those, otherwise, use the items passed
+        items_d = self.kwargs['parse_item'] if 'parse_item' in self.kwargs and self.kwargs['parse_item'] else item_dict       
         
         # check whether there are any items to parse (not already parsed) and:
         #  if there aren't any, open the file in append and write the log messages at the bottom
-        items = [item for item in item_list if item not in self.parsed_items_dict]
-        if not items:
-            logs += f'ERROR : {worker_type} : parse_logfile() - Nothing to parse. The values of the supplied items have already been parsed.\n'
+        items_d = {item:pattern for item, pattern in items_d.items() if item not in self.parsed_items_dict}
+        if not items_d:
+            logs += f'WARNING : {worker_type} : parse_logfile() - Nothing to parse. The values of the supplied items have already been parsed.\n'
             with open(logfile_path, 'a+', encoding='utf-8') as logfile:
                 logfile.write(logs)
             return
@@ -43,14 +46,12 @@ class monitor_utils():
             
             logs += f'INFO : {worker_type} : parse_logfile() - Started parsing the logfile.\n'
 
-            ptrn = compile(pattern)
-
             for line_nr, line in enumerate(logfile, start=1):
                 if not line.strip():
                     continue 
-                for item in items:
+                for item, pattern in items_d.items():
                     if f'| ITEM: {item}' in line:
-                        val = ptrn.search(line)
+                        val = pattern.search(line)
                         if val:
                             self.parsed_items_dict[item].append((line[:19], val.group(0)))
                             break
@@ -61,7 +62,7 @@ class monitor_utils():
             logfile.write(logs)
 
 
-    def generate_statistics(self, logfile_path: str, item_list: list, pattern: str, worker_type: str='undefined') -> None:
+    def generate_statistics(self, logfile_path: str, item_dict: list, worker_type: str='undefined') -> None:
             """
             The function searches for the items, through a logfile. For each item, from every line in the logfile it is present,
             extracts its value and calculates various statistics.
@@ -75,14 +76,19 @@ class monitor_utils():
             :worker_type: Optional. the worker type used to generate the logfile.
             """
 
-            self.parse_logfile(logfile_path=logfile_path, item_list=item_list, pattern=pattern, worker_type = worker_type)
+            self.parse_logfile(logfile_path=logfile_path, item_dict=item_dict, worker_type = worker_type)
 
             logs = f'\nINFO : {worker_type} : generate_statistics() - Started generating statistics.\n'
 
-            for item in item_list:
+            for item in item_dict:
 
                 timestamp_list = [val_tup[0] for val_tup in self.parsed_items_dict[item] if val_tup[1] != 'error']
-                values_list = [int(val_tup[1]) for val_tup in self.parsed_items_dict[item] if val_tup[1] != 'error']
+                try:
+                    values_list = [int(val_tup[1]) for val_tup in self.parsed_items_dict[item] if val_tup[1] != 'error']
+                except ValueError:
+                    logs += f'\nERROR : {worker_type} : generate_statistics() - Item {item} does not have integral value. Skipping it.\n'
+                    continue
+                    
 
                 # check how to use this zip if no item matches
                 #timestamp_list, values_list = zip(*[(timestamp, int(value)) for timestamp, value in self.parsed_items_dict[item] if value != 'error'])
@@ -98,8 +104,8 @@ class monitor_utils():
                     result = f'Stats for item {item} are:\n Minimum: {minimum[0]} (value first recorded at {minimum[1]})\n Maximum: {maximum[0]} (value first recorded at {maximum[1]})\n Average: {average}\n ' \
                                 f'Median: {med}\n Most common values: {mmode}\n Number of values used for the calculations: {length}\n\n'
                     logs += result
-                except:
-                    logs += f'\nERROR : {worker_type} : generate_statistics() - Unable to generate statistics for item {item}.\n'
+                except Exception as e:
+                    logs += f'\nERROR : {worker_type} : generate_statistics() - Unable to generate statistics for item {item}. Error: {e}\n'
             
             logs += f"INFO : {worker_type} : generate_statistics() - Finished generating statistics for the items provided.\n"
 
@@ -107,7 +113,7 @@ class monitor_utils():
             with open(logfile_path, 'a+', encoding='utf-8') as logfile:
                 logfile.write(logs)
 
-    def crash_detector(self, logfile_path: str, pattern: str, item: str, worker_type: str = 'undefined') -> None:
+    def crash_detector(self, logfile_path: str, item_dict: str, worker_type: str = 'undefined') -> None:
             '''
             Checks wheter a crash has occurred by comparing the expected uptime and actual uptime, based on the timestamps when these values were retrieved.
             logfile_path : the path to the logfile that will be searched for crashes
@@ -116,13 +122,13 @@ class monitor_utils():
             worker_type : only for logging purposes.
             '''
 
-            self.parse_logfile(logfile_path=logfile_path, item_list=[item], pattern=pattern, worker_type = worker_type)
+            self.parse_logfile(logfile_path=logfile_path, item_dict=item_dict, worker_type = worker_type)
 
             logs = f'\nINFO : {worker_type} : crash_detector() - Started operation.\n'
     
             uptimes_dict = {}
 
-            for iteration, time_tup in enumerate(self.parsed_items_dict[item], start=1):
+            for iteration, time_tup in enumerate(self.parsed_items_dict[str(list(item_dict.keys())[0])], start=1):
                 try:
                     uptime_parse_list = split('[\D\s]+', time_tup[1])
                     uptime_parse_list = [int(''.join(char for char in element if char.isdigit())) for element in uptime_parse_list]
@@ -181,7 +187,7 @@ class monitor_utils():
         # check if snmpget is installed
         if function == 'snmp_monitor':
             try:
-                run(['snmpget', '--h'])
+                run(['snmpget', '-V'], capture_output=True, check=True)
             except FileNotFoundError:
                 return (False, 'snmpget linux tool is required to run this application')
             except CalledProcessError:

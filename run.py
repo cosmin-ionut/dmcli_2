@@ -85,7 +85,8 @@ class dut_monitor():
             if profile['dut'] in self.workers:
                 self.dut_monitor_logger.warning(f"A worker for DUT {profile['dut']} already exists. Skip the initialization process.", extra={'entity': "DUT-MONITOR : init_worker()"})
                 return None
-            self.workers[profile['dut']] = getattr(modules[__name__], profile['function'])(profile)
+            #self.workers[profile['dut']] = getattr(modules[__name__], profile['function'])(profile)
+            self.workers[profile['dut']] = getattr(self.function, profile['function'])(profile)
             self.workers[profile['dut']].start()
             self.dut_monitor_logger.info(f"{profile['function']} worker for DUT {profile['dut']} created and started", extra={'entity': "DUT-MONITOR : init_worker()"})
         except Exception as e:
@@ -149,28 +150,18 @@ class dut_monitor():
             self.stop_workers()
             exit(1)
 
-e = dut_monitor(monitor_map=[{'dut':'16.1.1.10', 
-                              'function':'console_monitor',
-                              'items':['sysUpTime.0','hm2SfpInfoPartId.1'],
-                              'interval':30,
-                              'timeout':1000},
-                             {'dut':'16.1.1.10', 
+e = dut_monitor(monitor_map=[{'dut':'16.1.1.10',
                               'function':'snmp_monitor',
-                              'items':['sysUpTime.0','hm2SfpInfoPartId.1'],
-                              'interval':5,
-                              'timeout':40}])
-                              #'statistics':['sysUpTime.0','hm2SfpInfoPartId.1'],
-                              #'detect_crashes':'sysUpTime.0'},
-                              #{'dut':'10.14.211.2', 
-                              #'function':'snmp_monitor',
-                              #'items':['sysUpTime.0','hm2SfpInfoPartId.1','.1.3.6.1.4.1.248.11.22.1.8.10.1.0'],
-                              #'interval':145,
-                              #'timeout':80,
-                              #'statistics':False,
-                              #'detect_crashes':'hm2SfpInfoPartId.1'}))
+                              'items':['.1.3.6.1.4.1.248.11.22.1.8.11.2.0','.1.3.6.1.4.1.248.11.22.1.8.10.1.0','.1.3.6.1.2.1.1.3.0', 'sysUpTime.0','hm2SfpInfoPartId.1'],
+                              'interval':2,
+                              'timeout':10,
+                              'statistics':['.1.3.6.1.4.1.248.11.22.1.8.11.2.0','.1.3.6.1.4.1.248.11.22.1.8.10.1.0','.1.3.6.1.2.1.1.3.0', 'sysUpTime.0'],
+                              'detect_crashes':'sysUpTime.0'}])
+
 e.run()
-sleep(10)
-e.stop_workers(dut = 'all')
+e.join_workers(dut = 'all')
+
+
 
 '''   
 e = dut_monitor(monitor_map = {'telnet 10.2.36.236 5042':[('show sysinfo','Backplane Hardware Description'),('show sysinfo','System Up Time'),('show sysinfo','CPU Utilization'), ('show temperature','Lower Temperature Limit for Trap')],

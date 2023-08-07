@@ -4,8 +4,7 @@ import logging
 from re import search
 from time import sleep
 from pexpect import *# spawn, TIMEOUT, EOF, expect, sendline
-from pieces.monitor_utils import generate_statistics, crash_detector
-
+from pieces.monitor_utils import monitor_utils
 
 class console_monitor(Thread):
     
