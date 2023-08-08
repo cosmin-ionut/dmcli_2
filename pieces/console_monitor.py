@@ -14,11 +14,10 @@ class console_monitor(Thread):
         Thread.__init__(self)
         
         # time settings and default values
-        self.timeout = profile['timeout']
         self.interval = profile['interval']
         self.start_time = profile['start_time']
-        self.endtime = self.start_time + timedelta(seconds=self.timeout) # set the endtime of the whole monitoring process 
-
+        # set the endtime of the whole monitoring process 
+        self.endtime = self.start_time + timedelta(seconds=profile['timeout']) if profile['timeout'] else None 
         #logfile configuration
         self.logfile_path = f"logfile_cli_{profile['dut'].replace(' ','_')}_{self.start_time.strftime('%d_%b_%Y_%H_%M_%S')}.log"
         self.logger = logging.getLogger(f"{profile['dut'].replace(' ','_')}_cli")
@@ -206,10 +205,13 @@ class console_monitor(Thread):
 
     def run(self):
         self.logger.info(f"INFO : CLI-MONITOR : run() - Thread operation started.\n\n\n")
+        if not self.endtime:
+            self.logger.info(f"WARNING : CLI-MONITOR : run() - A time limit for the monitoring process was not set.")
         while True:
-            if not self.endtime > datetime.now():
-                self.logger.info(f"INFO : CLI-MONITOR : run() - Thread finished execution. Time limit reached.")
-                break
+            if self.endtime:
+                if not self.endtime > datetime.now():
+                    self.logger.info(f"INFO : CLI-MONITOR : run() - Thread finished execution. Time limit reached.")
+                    break
             if self.stop_thread:
                 self.logger.info(f"WARNING : CLI-MONITOR : run() - Thread stopped ahead of time due to a call to stop().")
                 break
