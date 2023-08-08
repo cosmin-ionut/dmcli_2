@@ -5,6 +5,7 @@ from re import search
 from time import sleep
 from pexpect import *# spawn, TIMEOUT, EOF, expect, sendline
 from pieces.monitor_utils import monitor_utils
+from re import compile
 
 class console_monitor(Thread):
     
@@ -28,6 +29,7 @@ class console_monitor(Thread):
         self.logger.addHandler(logfile_handler)
 
         # other settings
+        self.function = profile['function']
         self.dut_cli = profile['dut'] # the ser2net console of the DUT | telnet localhost 30000
         self.item_list = list(set(profile['items'])) # can contain either OIDs or MIBs. The conversion is done to remove duplicate items
         #self.item_list = item_list
@@ -35,12 +37,14 @@ class console_monitor(Thread):
         self.connection = False
         self.error_counter = 0
         # end-thread functionalities
-        self.statistics = profile['statistics'] if 'statistics' in profile else False
-        if self.statistics:
-            self.statistics_list = []
-            for item in self.item_list:
-                self.statistics_list.append(item[1])
-        self.detect_crashes = profile['detect_crashes'] if 'detect_crashes' in profile else False
+        parse_items = {}
+        if 'statistics' in profile:
+            self.statistics = {item: compile("\\B\s\s[0-9a-zA-Z\-\.\\\/]+") for item in profile['statistics']}
+            parse_items.update(self.statistics)
+        if 'detect_crashes' in profile:
+            self.detect_crashes = {profile['detect_crashes']: compile('\d+\sdays?.*\d+.*\d+.*\d+')}
+            parse_items.update(self.detect_crashes)
+        self.utils = monitor_utils(parse_item = parse_items)
         # stop mechanism
         self.thread_sleep = Event()
         self.stopped = Event()   # | these two work the thread stop mechanism
@@ -219,9 +223,9 @@ class console_monitor(Thread):
             self.iteration_number += 1
             self.thread_sleep.wait(timeout=self.interval)
         if self.statistics:
-            generate_statistics(logfile_path=self.logfile_path, item_list=self.statistics_list, pattern="\\B\s\s[0-9a-zA-Z\-\.\\\/]+", worker_type='CONSOLE-MONITOR')
+            self.utils.generate_statistics(logfile_path=self.logfile_path, item_dict=self.statistics, worker_type='CONSOLE-MONITOR')
         if self.detect_crashes:
-            crash_detector(logfile_path=self.logfile_path, uptime_pattern='\d+\sdays?.*\d+.*\d+.*\d+', uptime_items=self.detect_crashes, worker_type='CONSOLE-MONITOR')
+            self.utils.crash_detector(logfile_path=self.logfile_path, item_dict=self.detect_crashes, worker_type='CONSOLE-MONITOR')
         if self.connection:
             self.connection.close()
         self.stopped.set()

@@ -150,6 +150,7 @@ class dut_monitor():
             self.stop_workers()
             exit(1)
 
+'''
 e = dut_monitor(monitor_map=[{'dut':'16.1.1.10',
                               'function':'snmp_monitor',
                               'items':['.1.3.6.1.4.1.248.11.22.1.8.11.2.0','.1.3.6.1.4.1.248.11.22.1.8.10.1.0','.1.3.6.1.2.1.1.3.0', 'sysUpTime.0','hm2SfpInfoPartId.1'],
@@ -157,13 +158,20 @@ e = dut_monitor(monitor_map=[{'dut':'16.1.1.10',
                               'timeout':10,
                               'statistics':['.1.3.6.1.4.1.248.11.22.1.8.11.2.0','.1.3.6.1.4.1.248.11.22.1.8.10.1.0','.1.3.6.1.2.1.1.3.0', 'sysUpTime.0'],
                               'detect_crashes':'sysUpTime.0'}])
+'''
+e = dut_monitor(monitor_map=[{'dut':'telnet localhost 20001',
+                              'function':'console_monitor',
+                              'items':[('show system info','System uptime'),('show system resources','CPU utilization'), ('show system resources','Allocated RAM'), ('show system temperature limits',"Current temperature")],
+                              'interval':2,
+                              'timeout':30,
+                              'statistics':['CPU utilization','Allocated RAM', 'Current temperature'],
+                              'detect_crashes':'System uptime'}])
 
 e.run()
 e.join_workers(dut = 'all')
 
 
-
-'''   
+'''
 e = dut_monitor(monitor_map = {'telnet 10.2.36.236 5042':[('show sysinfo','Backplane Hardware Description'),('show sysinfo','System Up Time'),('show sysinfo','CPU Utilization'), ('show temperature','Lower Temperature Limit for Trap')],
                                'telnet localhost 30001':[('show system info','System uptime')],
                                'telnet 10.2.36.236 5037':[('show system info','Serial number'),('show system info','Power Supply P1, state'),('show system info','System uptime'), ('show sfp 1/1','RxPwr high alarm threshold   [mW]')]

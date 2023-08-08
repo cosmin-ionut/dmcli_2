@@ -19,11 +19,10 @@ class monitor_utils():
 
     def parse_logfile(self, logfile_path: str, item_dict: dict, worker_type: str = 'undefined') -> None:
         """
-        Parses the logfile and populates a dictionary of {item_1:(timestamp, value), item_2:(timestamp, value), item_3:(timestamp, 'error')}
+        Parses the logfile and populates a dictionary of {item_1:[(timestamp, value), (timestamp, 'error')], item_2:[(timestamp, value). (timestamp, value)],...}
         If a value can't be retrieved based on the regex pattern provided
         :logfile_path: string path to the logfile that will be parsed
-        :item_list: the list of items whose values will be retrieved
-        :pattern: the pattern used to retrieve the value for ALL items. Separate patterns for each item are not possible
+        :item_dict: a dictionary of {'item':<compiled_ptrn_obj>, 'item2':<compiled_ptrn_obj>}
         :worker_type: for logging purposes. Not mandatory
         """
 
@@ -70,9 +69,8 @@ class monitor_utils():
             <TIMESTAMP> | ITEM: <item> some text here: <integral_value> none or some more text here 
             2022-11-06 15:21:00,652 | ITEM: .1.3.6.1.4.1.248.11.22.1.8.10.1.0 query result:  100 percent
             :logfile_path: path to the logfile
-            :item_list: the items whose statistics will be generated
-            :pattern: the regex pattern used to extract the value from each line in the logfile
-                    MUST always match an integral. Ex: \s\s[0-9]+\s
+            :item_dict: a dictionary of {'item':<compiled_ptrn_obj>, 'item2':<compiled_ptrn_obj>}
+                        the patterns should  match an integral. Ex: \s\s[0-9]+\s
             :worker_type: Optional. the worker type used to generate the logfile.
             """
 
@@ -88,10 +86,6 @@ class monitor_utils():
                 except ValueError:
                     logs += f'\nERROR : {worker_type} : generate_statistics() - Item {item} does not have integral value. Skipping it.\n'
                     continue
-                    
-
-                # check how to use this zip if no item matches
-                #timestamp_list, values_list = zip(*[(timestamp, int(value)) for timestamp, value in self.parsed_items_dict[item] if value != 'error'])
 
                 try:
                     minimum = min(zip(values_list, timestamp_list), key=lambda pair: pair[0])
@@ -125,10 +119,17 @@ class monitor_utils():
             self.parse_logfile(logfile_path=logfile_path, item_dict=item_dict, worker_type = worker_type)
 
             logs = f'\nINFO : {worker_type} : crash_detector() - Started operation.\n'
+            
+            uptime_item = str(list(item_dict.keys())[0])
+            if not self.parsed_items_dict[uptime_item]:
+                logs += f"ERROR : {worker_type} : crash_detector() - There are no parsed values for '{uptime_item}'. Cannot continue.\n"
+                with open(logfile_path, 'a+', encoding='utf-8') as logfile:
+                    logfile.write(logs)
+                return
     
             uptimes_dict = {}
 
-            for iteration, time_tup in enumerate(self.parsed_items_dict[str(list(item_dict.keys())[0])], start=1):
+            for iteration, time_tup in enumerate(self.parsed_items_dict[uptime_item], start=1):
                 try:
                     uptime_parse_list = split('[\D\s]+', time_tup[1])
                     uptime_parse_list = [int(''.join(char for char in element if char.isdigit())) for element in uptime_parse_list]
@@ -158,6 +159,7 @@ class monitor_utils():
                     last_successful_iteration = iteration
                 except Exception as e:
                     logs += f"ERROR : {worker_type} : crash_detector() - Couldn't compare uptime values: {e}\n"
+            logs += f"INFO : {worker_type} : crash_detector() - {len(uptimes_dict)} iterations were checked for crashes."
             logs += f"INFO : {worker_type} : crash_detector() - Operation finished."
             with open(logfile_path, 'a+', encoding='utf-8') as logfile:
                 logfile.write(logs)
