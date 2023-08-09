@@ -57,9 +57,10 @@ class console_monitor(Thread):
 
         while True:
 
-            if not self.endtime > datetime.now():
-                self.logger.info(f"WARNING : CLI-MONITOR : spawn_cli_connection() - Thread time limit reached before spawning a connection")
-                break
+            if self.endtime:
+                if not self.endtime > datetime.now():
+                    self.logger.info(f"WARNING : CLI-MONITOR : spawn_cli_connection() - Thread time limit reached before spawning a connection")
+                    break
 
             connection = spawn(command, timeout=int('10'), encoding='utf-8', codec_errors='ignore')
             index = connection.expect(['Connected.*', TIMEOUT, EOF], timeout=10)

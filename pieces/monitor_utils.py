@@ -159,7 +159,7 @@ class monitor_utils():
                     last_successful_iteration = iteration
                 except Exception as e:
                     logs += f"ERROR : {worker_type} : crash_detector() - Couldn't compare uptime values: {e}\n"
-            logs += f"INFO : {worker_type} : crash_detector() - {len(uptimes_dict)} iterations were checked for crashes."
+            logs += f"INFO : {worker_type} : crash_detector() - {len(uptimes_dict)} iterations were checked for crashes.\n"
             logs += f"INFO : {worker_type} : crash_detector() - Operation finished."
             with open(logfile_path, 'a+', encoding='utf-8') as logfile:
                 logfile.write(logs)

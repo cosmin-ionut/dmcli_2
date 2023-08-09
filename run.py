@@ -30,13 +30,17 @@ class dut_monitor():
         # check that the environment requirements are met and perform the module imports
         #  based on the functions that the profile uses
         utils = monitor_utils()
-        for function in {profile['function'] for profile in monitor_map}:  
+        for function in {profile['function'] for profile in monitor_map}:
+            self.dut_monitor_logger.info(f"Checking the environment for the required module {function}",
+                                          extra={'entity': "DUT-MONITOR : __init__()"})
             passed, message = utils.environment_check(function = function)
             if not passed:
                 self.dut_monitor_logger.critical(f"Environment check failed with error: {message}",
                                               extra={'entity': "DUT-MONITOR : __init__()"})
                 exit(1)
             self.function = import_module(f'pieces.{function}')
+            self.dut_monitor_logger.info(f"Import of the required module {function} was successful",
+                                          extra={'entity': "DUT-MONITOR : __init__()"})
 
         self.monitor_map = monitor_map 
         self.workers = {} # the dictionary of workers
@@ -163,12 +167,15 @@ e = dut_monitor(monitor_map=[{'dut':'telnet localhost 20001',
                               'function':'console_monitor',
                               'items':[('show system info','System uptime'),('show system resources','CPU utilization'), ('show system resources','Allocated RAM'), ('show system temperature limits',"Current temperature")],
                               'interval':2,
-                              'timeout':30,
+                              'timeout':None,
                               'statistics':['CPU utilization','Allocated RAM', 'Current temperature'],
                               'detect_crashes':'System uptime'}])
 
 e.run()
-e.join_workers(dut = 'all')
+sleep(500)
+e.stop_workers(dut = 'all')
+#e.join_workers(dut = 'all')
+
 
 
 '''
