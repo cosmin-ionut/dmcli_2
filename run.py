@@ -20,6 +20,7 @@ class dut_monitor():
         # generate a start time for sync purposes and configure the logger
         self.start_time = datetime.now()
         self.logger_configurator()
+        self.imported_modules = {}
 
         # check that the profiles are correctly passed to the monitor
         if not isinstance(monitor_map, list):
@@ -38,7 +39,7 @@ class dut_monitor():
                 self.dut_monitor_logger.critical(f"Environment check failed with error: {message}",
                                               extra={'entity': "DUT-MONITOR : __init__()"})
                 exit(1)
-            self.function = import_module(f'pieces.{function}')
+            self.imported_modules[function] = import_module(f'pieces.{function}')
             self.dut_monitor_logger.info(f"Import of the required module {function} was successful",
                                           extra={'entity': "DUT-MONITOR : __init__()"})
 
@@ -89,8 +90,7 @@ class dut_monitor():
             if profile['dut'] in self.workers:
                 self.dut_monitor_logger.warning(f"A worker for DUT {profile['dut']} already exists. Skip the initialization process.", extra={'entity': "DUT-MONITOR : init_worker()"})
                 return None
-            #self.workers[profile['dut']] = getattr(modules[__name__], profile['function'])(profile)
-            self.workers[profile['dut']] = getattr(self.function, profile['function'])(profile)
+            self.workers[profile['dut']] = getattr(self.imported_modules[profile['function']], profile['function'])(profile)
             self.workers[profile['dut']].start()
             self.dut_monitor_logger.info(f"{profile['function']} worker for DUT {profile['dut']} created and started", extra={'entity': "DUT-MONITOR : init_worker()"})
         except Exception as e:
