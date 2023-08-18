@@ -154,99 +154,28 @@ class dut_monitor():
             self.stop_workers()
             exit(1)
 
-'''
-e = dut_monitor(monitor_map=[{'dut':'16.1.1.10',
-                              'function':'snmp_monitor',
-                              'items':['.1.3.6.1.4.1.248.11.22.1.8.11.2.0','.1.3.6.1.4.1.248.11.22.1.8.10.1.0','.1.3.6.1.2.1.1.3.0', 'sysUpTime.0','hm2SfpInfoPartId.1'],
-                              'interval':2,
-                              'timeout':10,
-                              'statistics':['.1.3.6.1.4.1.248.11.22.1.8.11.2.0','.1.3.6.1.4.1.248.11.22.1.8.10.1.0','.1.3.6.1.2.1.1.3.0', 'sysUpTime.0'],
-                              'detect_crashes':'sysUpTime.0'}])
-'''
+
 e = dut_monitor(monitor_map=[{'dut':'telnet localhost 20001',
                               'function':'console_monitor',
                               'items':[('show system info','System uptime'),('show system resources','CPU utilization'), ('show system resources','Allocated RAM'), ('show system temperature limits',"Current temperature")],
                               'interval':2,
                               'timeout':None,
                               'statistics':['CPU utilization','Allocated RAM', 'Current temperature'],
-                              'detect_crashes':'System uptime'}])
+                              'detect_crashes':'System uptime'},
+                              {'dut':'16.1.1.10',
+                              'function':'snmp_monitor',
+                              'items':['.1.3.6.1.4.1.248.11.22.1.8.11.2.0','.1.3.6.1.4.1.248.11.22.1.8.10.1.0','.1.3.6.1.2.1.1.3.0', 'sysUpTime.0','hm2SfpInfoPartId.1'],
+                              'interval':2,
+                              'timeout':None,
+                              'statistics':['.1.3.6.1.4.1.248.11.22.1.8.11.2.0','.1.3.6.1.4.1.248.11.22.1.8.10.1.0','.1.3.6.1.2.1.1.3.0', 'sysUpTime.0'],
+                              'detect_crashes':'sysUpTime.0'}])
 
 e.run()
-sleep(500)
+sleep(6000)
 e.stop_workers(dut = 'all')
-#e.join_workers(dut = 'all')
-
 
 
 '''
-e = dut_monitor(monitor_map = {'telnet 10.2.36.236 5042':[('show sysinfo','Backplane Hardware Description'),('show sysinfo','System Up Time'),('show sysinfo','CPU Utilization'), ('show temperature','Lower Temperature Limit for Trap')],
-                               'telnet localhost 30001':[('show system info','System uptime')],
-                               'telnet 10.2.36.236 5037':[('show system info','Serial number'),('show system info','Power Supply P1, state'),('show system info','System uptime'), ('show sfp 1/1','RxPwr high alarm threshold   [mW]')]
-                               },
-                function='console_monitor', #the function I want to use
-                interval=5, # waiting interval. Depending on how much time it takes to query all items, the actual interval between two iterations may be higher.
-                seconds = 90000, # time limit for the script
-                #dut_list=['15.1.1.50'], # devices monitored
-                #item_list=['.1.3.6.1.4.1.248.11.22.1.8.11.2.0','.1.3.6.1.4.1.248.11.22.1.8.10.1.0','.1.3.6.1.2.1.1.3.0', 'sysUpTime.0','hm2SfpInfoPartId.1'], # items monitored
-                statistics = True, # calculate min max and avg for each item monitored
-                detect_crashes=['System Up Time', 'System uptime']) # try to detect DUT crashes. the item passed MUST be a DUT uptime item for this to work.
-e.run()
-x = input('Press any key to stop') # the script stays blocked here until the user presses a key
-e.stop_workers() # I stop all workers ahead of time.
-
-the format of dut_monitor must be:
-dut_monitor(monitor_map = {dut:dut1, function:, profile:{'items':[],
-                                'function':'function',
-                                'interval':'interval',
-                                'timeout':'timeout',
-                                kwargs:{detect_crashes:{},statistics:bool}
-                                },
-                           dut2:{'items':[],
-                                'function':'function',
-                                'interval':'interval',
-                                'timeout':'timeout',
-                                kwargs:{detect_crashes:{},statistics:bool}
-                                }})
-            
-
-e = dut_monitor(monitor_map = {'10.10.255.98':['sysUpTime.0','hm2DiagCpuAverageUtilization.0','hm2DiagMemoryRamFree.0'],
-                               '10.10.255.37':['sysUpTime.0','hm2DiagCpuAverageUtilization.0','hm2DiagMemoryRamFree.0'],
-                               '10.10.255.124':['sysUpTime.0','hm2DiagCpuAverageUtilization.0','hm2DiagMemoryRamFree.0'],
-                               '10.10.255.100':['sysUpTime.0','hm2DiagCpuAverageUtilization.0','hm2DiagMemoryRamFree.0'],
-                               '10.10.255.36':['sysUpTime.0','hm2DiagCpuAverageUtilization.0','hm2DiagMemoryRamFree.0'],
-                               '10.10.255.35':['sysUpTime.0','hm2DiagCpuAverageUtilization.0','hm2DiagMemoryRamFree.0'],
-                               '10.10.255.12':['sysUpTime.0','hm2DiagCpuAverageUtilization.0','hm2DiagMemoryRamFree.0'],
-                               '10.10.255.39':['sysUpTime.0','hm2DiagCpuAverageUtilization.0','hm2DiagMemoryRamFree.0'],
-                               '10.10.255.40':['sysUpTime.0','hm2DiagCpuAverageUtilization.0','hm2DiagMemoryRamFree.0'],
-                               '10.10.255.42':['hmMemoryFree.0','hmCpuAverageUtilization.0','.1.3.6.1.2.1.1.3.0'],
-                               '10.10.255.41':['hmMemoryFree.0','hmCpuAverageUtilization.0','.1.3.6.1.2.1.1.3.0'],
-                               '10.10.255.43':['hmMemoryFree.0','hmCpuAverageUtilization.0','.1.3.6.1.2.1.1.3.0'],
-                               '10.10.255.44':['hmMemoryFree.0','hmCpuAverageUtilization.0','.1.3.6.1.2.1.1.3.0']
-                               },
-                function='snmp_monitor', #the function I want to use
-                interval=2, # waiting interval. Depending on how much time it takes to query all items, the actual interval between two iterations may be higher.
-                seconds = 90000, # time limit for the script
-                #dut_list=['15.1.1.50'], # devices monitored
-                #item_list=['.1.3.6.1.4.1.248.11.22.1.8.11.2.0','.1.3.6.1.4.1.248.11.22.1.8.10.1.0','.1.3.6.1.2.1.1.3.0', 'sysUpTime.0','hm2SfpInfoPartId.1'], # items monitored
-                statistics = True, # calculate min max and avg for each item monitored
-                detect_crashes = {'10.10.255.98':'sysUpTime.0',
-                                  '10.10.255.42':'.1.3.6.1.2.1.1.3.0' }) # try to detect DUT crashes. the item passed MUST be a DUT uptime item for this to work.
-e.run()
-x = input('Press any key to stop') # the script stays blocked here until the user presses a key
-e.stop_workers() # I stop all workers ahead of time.
-'''
-
-'''
-e = dut_monitor(function='console_monitor', #the function I want to use
-                interval=5, # waiting interval. Depending on how much time it takes to query all items, the actual interval between two iterations may be higher.
-                seconds = 10000, # time limit for the script
-                dut_list=['telnet 10.10.0.252 10002'], # devices monitored
-                item_list=[('show system info','System uptime'),('show system resources','CPU utilization'), ('show system resources','Resources measurement'), ('show system temperature limits',"Current temperature"), ('show interface ether-stats 6/1',"Packets RX  256-511 octets")], # items monitored
-                #item_list=[('show system temperature limits',"Current temperature")], # items monitored
-                statistics = True,
-                detect_crashes = 'System uptime'
-                ) # try to detect DUT crashes. the item passed MUST be a DUT uptime item for this to work.
-
 
 USAGE:
 _____________
