@@ -29,18 +29,18 @@ class dut_monitor():
             exit(1)
         
         # check that the environment requirements are met and perform the module imports
-        #  based on the functions that the profile uses
+        #  based on the utility that the profile uses
         utils = monitor_utils()
-        for function in {profile['function'] for profile in monitor_map}:
-            self.dut_monitor_logger.info(f"Checking the environment for the required module {function}",
+        for utility in {profile['utility'] for profile in monitor_map}:
+            self.dut_monitor_logger.info(f"Checking the environment for the required module {utility}",
                                           extra={'entity': "DUT-MONITOR : __init__()"})
-            passed, message = utils.environment_check(function = function)
+            passed, message = utils.environment_check(utility = utility)
             if not passed:
                 self.dut_monitor_logger.critical(f"Environment check failed with error: {message}",
                                               extra={'entity': "DUT-MONITOR : __init__()"})
                 exit(1)
-            self.imported_modules[function] = import_module(f'pieces.{function}')
-            self.dut_monitor_logger.info(f"Import of the required module {function} was successful",
+            self.imported_modules[utility] = import_module(f'pieces.{utility}')
+            self.dut_monitor_logger.info(f"Import of the required module {utility} was successful",
                                           extra={'entity': "DUT-MONITOR : __init__()"})
 
         self.monitor_map = monitor_map 
@@ -52,7 +52,7 @@ class dut_monitor():
          are present in the profile passed by the user.
         """
 
-        mandatory_params = ['dut', 'function', 'items', 'interval', 'timeout']
+        mandatory_params = ['dut', 'utility', 'items', 'interval', 'timeout']
         current_params = list(profile.keys())
 
         missing_items = list(set(mandatory_params) - set(current_params))
@@ -78,23 +78,23 @@ class dut_monitor():
         for dut in duts:
             self.dut_monitor_logger.info(f"Now stopping {dut}'s worker", extra={'entity': "DUT-MONITOR : stop_workers()"})
             self.workers[dut].stop()
-            self.dut_monitor_logger.info(f"Stop command sent to DUT {dut} {self.workers[dut].function} worker", extra={'entity': "DUT-MONITOR : stop_workers()"})
+            self.dut_monitor_logger.info(f"Stop command sent to DUT {dut} {self.workers[dut].utility} worker", extra={'entity': "DUT-MONITOR : stop_workers()"})
         for dut in duts:
             if self.workers[dut].is_alive():
                 self.workers[dut].stopped.wait()
-            self.dut_monitor_logger.info(f"DUT {dut} {self.workers[dut].function} worker terminated execution.", extra={'entity': "DUT-MONITOR : stop_workers()"})
+            self.dut_monitor_logger.info(f"DUT {dut} {self.workers[dut].utility} worker terminated execution.", extra={'entity': "DUT-MONITOR : stop_workers()"})
 
     def init_worker(self, profile: dict) -> None:
         try:
-            self.dut_monitor_logger.info(f"Trying to create {profile['function']} type worker for DUT {profile['dut']}", extra={'entity': "DUT-MONITOR : init_worker()"})
+            self.dut_monitor_logger.info(f"Trying to create {profile['utility']} type worker for DUT {profile['dut']}", extra={'entity': "DUT-MONITOR : init_worker()"})
             if profile['dut'] in self.workers:
                 self.dut_monitor_logger.warning(f"A worker for DUT {profile['dut']} already exists. Skip the initialization process.", extra={'entity': "DUT-MONITOR : init_worker()"})
                 return None
-            self.workers[profile['dut']] = getattr(self.imported_modules[profile['function']], profile['function'])(profile)
+            self.workers[profile['dut']] = getattr(self.imported_modules[profile['utility']], profile['utility'])(profile)
             self.workers[profile['dut']].start()
-            self.dut_monitor_logger.info(f"{profile['function']} worker for DUT {profile['dut']} created and started", extra={'entity': "DUT-MONITOR : init_worker()"})
+            self.dut_monitor_logger.info(f"{profile['utility']} worker for DUT {profile['dut']} created and started", extra={'entity': "DUT-MONITOR : init_worker()"})
         except Exception as e:
-            self.dut_monitor_logger.critical(f"Error: {e} occurred while trying to initialize {profile['function']} worker for DUT {profile['dut']}", extra={'entity': "DUT-MONITOR : init_worker()"})
+            self.dut_monitor_logger.critical(f"Error: {e} occurred while trying to initialize {profile['utility']} worker for DUT {profile['dut']}", extra={'entity': "DUT-MONITOR : init_worker()"})
             
     def logger_configurator(self) -> None:
         try:
@@ -128,9 +128,9 @@ class dut_monitor():
 
         for dut in duts:
 
-            self.dut_monitor_logger.info(f"Now joining {self.workers[dut].function} worker of DUT {dut}", extra={'entity': "DUT-MONITOR : join_workers()"})
+            self.dut_monitor_logger.info(f"Now joining {self.workers[dut].utility} worker of DUT {dut}", extra={'entity': "DUT-MONITOR : join_workers()"})
             self.workers[dut].join(timeout=timeout)
-            self.dut_monitor_logger.info(f"DUT {dut} {self.workers[dut].function} worker finished its activity or the timeout expired.", 
+            self.dut_monitor_logger.info(f"DUT {dut} {self.workers[dut].utility} worker finished its activity or the timeout expired.", 
                                          extra={'entity': "DUT-MONITOR : join_workers()"})
         return True
             
@@ -156,14 +156,14 @@ class dut_monitor():
 
 
 e = dut_monitor(monitor_map=[{'dut':'telnet localhost 20001',
-                              'function':'console_monitor',
+                              'utility':'console_monitor',
                               'items':[('show system info','System uptime'),('show system resources','CPU utilization'), ('show system resources','Allocated RAM'), ('show system temperature limits',"Current temperature")],
                               'interval':2,
                               'timeout':None,
                               'statistics':['CPU utilization','Allocated RAM', 'Current temperature'],
                               'detect_crashes':'System uptime'},
                               {'dut':'16.1.1.10',
-                              'function':'snmp_monitor',
+                              'utility':'snmp_monitor',
                               'items':['.1.3.6.1.4.1.248.11.22.1.8.11.2.0','.1.3.6.1.4.1.248.11.22.1.8.10.1.0','.1.3.6.1.2.1.1.3.0', 'sysUpTime.0','hm2SfpInfoPartId.1'],
                               'interval':2,
                               'timeout':None,

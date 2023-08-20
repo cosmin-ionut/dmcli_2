@@ -63,7 +63,7 @@ class monitor_utils():
 
     def generate_statistics(self, logfile_path: str, item_dict: list, worker_type: str='undefined') -> None:
             """
-            The function searches for the items, through a logfile. For each item, from every line in the logfile it is present,
+            The method searches for the items, through a logfile. For each item, from every line in the logfile it is present,
             extracts its value and calculates various statistics.
             Logfile entry format:
             <TIMESTAMP> | ITEM: <item> some text here: <integral_value> none or some more text here 
@@ -168,31 +168,58 @@ class monitor_utils():
     # thus, it takes into account both the interval between iterations AND the time needed for an iteration to complete, plus an error of 1 seconds. 
     # it is VERY dependant on the format of the logfile
 
-    def environment_check(self, function:str) -> tuple:
-        '''
-        Checks the requirements of the app: Linux OS, python version 3.9 or newer and snmpget
-        '''
+    def _console_monitor_req_check_hlp(self) -> tuple:
+        '''Helper method. Checks whether the requirements for 'console_monitor' utility are met or not. Returns:
+        * tuple: (True, None) if requirements are met;
+        * tuple: (False, 'err_msg') if requirements are not met.'''
+
+        # check if pexpect is installed
+        if not util.find_spec('pexpect'):
+            return (False, 'Pexpect module is needed to use console_monitor utility')
+
+        # check if telnet is installed
+        try:
+            run(['which', 'telnet'], capture_output=True, check=True)
+        except (FileNotFoundError, CalledProcessError):
+            return (False, 'telnet is needed to use console_monitor utility but it is not installed')         
+        
+        return True, None
+
+    def _snmp_monitor_req_check_hlp(self) -> tuple:
+        '''Helper method. Checks whether the requirements for 'snmp_monitor' utility are met or not. Returns:
+        * tuple: (True, None) if requirements are met;
+        * tuple: (False, 'err_msg') if requirements are not met.'''
+
+        try:
+            run(['snmpget', '-V'], capture_output=True, check=True)
+        except (FileNotFoundError, CalledProcessError):
+            return (False, 'snmpget is needed to use snmp_monitor utility but it is not installed or reported errors during version check')
+        
+        return True, None
+
+
+    def environment_check(self, utility:str) -> tuple:
+        '''Checks whether the requirements for running the app are met or not.\n
+        Parms: 
+        * utility: string. The utility used to monitor the device (e.g. snmp_monitor).
+
+        Returns:
+        * tuple: (True, None) if requirements are met;
+        * tuple: (False, 'err_msg') if requirements are not met.'''
+
+        d = {'console_monitor': self._console_monitor_req_check_hlp,
+             'snmp_monitor': self._snmp_monitor_req_check_hlp}
 
         if system() != 'Linux':
             # Linux is needed because pexpect module is available on Linux only.
             # Pexpect has an alternative for Windows called wexpect but I didn't test that one
             return (False, 'Linux OS is required to run this app')
 
-        # check python version:
-        if int(version_info.major) < 3 and int(version_info.minor) < 9:
+        if version_info < (3, 9):
             return (False, 'Python version 3.9 or newer required to run this application')
 
-        # check if pexpect is installed
-        if function == 'console_monitor' and not util.find_spec('pexpect'):
-            return (False, 'Pexpect module is needed to run this application')
-        
-        # check if snmpget is installed
-        if function == 'snmp_monitor':
-            try:
-                run(['snmpget', '-V'], capture_output=True, check=True)
-            except FileNotFoundError:
-                return (False, 'snmpget linux tool is required to run this application')
-            except CalledProcessError:
-                return (False, 'snmpget linux tool reported an error upon execution')
+        rc, msg = d[utility]()
+        if not rc:
+            return rc, msg 
 
         return True, None

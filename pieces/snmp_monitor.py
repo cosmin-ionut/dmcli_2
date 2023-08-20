@@ -30,7 +30,7 @@ class snmp_monitor(Thread):
         self.logger.addHandler(logfile_handler)
         # other settings
         self.dut_ip = profile['dut'] # the IP of the DUT
-        self.function = profile['function']
+        self.utility = profile['utility']
         self.item_list = list(set(profile['items'])) # can contain either OIDs or MIBs. The conversion is done to remove duplicate items
         self.iteration_number = 1 # the index of the iteration
         # end-thread functionalities

@@ -28,7 +28,7 @@ class console_monitor(Thread):
         self.logger.addHandler(logfile_handler)
 
         # other settings
-        self.function = profile['function']
+        self.utility = profile['utility']
         self.dut_cli = profile['dut'] # the ser2net console of the DUT | telnet localhost 30000
         self.item_list = list(set(profile['items'])) # can contain either OIDs or MIBs. The conversion is done to remove duplicate items
         #self.item_list = item_list
