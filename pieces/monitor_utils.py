@@ -129,40 +129,30 @@ class monitor_utils():
                 logs += f"ERROR : {worker_type} : crash_detector() - There are no parsed values for '{uptime_item}'. Cannot continue.\n"
                 self._write_to_file_hlp(logfile_path=logfile_path, mode='a+', content=logs)
                 return
-    
-            uptimes_dict = {}
-
-            for iteration, time_tup in enumerate(self.parsed_items_dict[uptime_item], start=1):
-                try:
-                    uptime_parse_list = split('[\D\s]+', time_tup[1])
-                    uptime_parse_list = [int(''.join(char for char in element if char.isdigit())) for element in uptime_parse_list]
-                    uptimes_dict[iteration] = (datetime.strptime(time_tup[0], '%Y-%m-%d %H:%M:%S'), 
-                                               86400*uptime_parse_list[0] + 3600*uptime_parse_list[1] + 
-                                               60*uptime_parse_list[2] + uptime_parse_list[3])
-                except:
-                    uptimes_dict[iteration] = (datetime.strptime(time_tup[0], '%Y-%m-%d %H:%M:%S'), 'error')
 
             last_successful_iteration = None
-            for iteration, time_tup in uptimes_dict.items():
+            for iteration, time_tup in enumerate(self.parsed_items_dict[uptime_item], start=1): 
                 if time_tup[1] == 'error':
                     logs += f"WARNING : {worker_type} : crash_detector() - Error at value retrieval in iteration {iteration}\n"
                     continue
+                uptime_value = [int(''.join(char for char in element if char.isdigit())) for element in split('[\D\s]+', time_tup[1])]
+                uptime_value = 86400*uptime_value[0] + 3600*uptime_value[1] + 60*uptime_value[2] + uptime_value[3]
                 if not last_successful_iteration:
                     logs += f"ERROR : {worker_type} : crash_detector() - Couldn't compare uptime values because no previous successful iteration was recorded.\n" \
                             f'This happened because during none of the iterations before this one (iteration {iteration}) could the uptime be retrieved.\n'
-                    last_successful_iteration = iteration
+                    last_successful_iteration = (iteration, datetime.strptime(time_tup[0], '%Y-%m-%d %H:%M:%S'), uptime_value)
                     continue
-                true_interval = (time_tup[0] - uptimes_dict[last_successful_iteration][0]).total_seconds() # timedelta between the current and the last successful iteration in timeticks
+                true_interval = (datetime.strptime(time_tup[0], '%Y-%m-%d %H:%M:%S') - last_successful_iteration[1]).total_seconds()
                 try:
-                    expected_uptime = (uptimes_dict[last_successful_iteration][1] + true_interval) - 1 # a hardcoded 1 second error interval.
-                    if time_tup[1] < expected_uptime:
+                    expected_uptime = (last_successful_iteration[2] + true_interval) - 1
+                    if uptime_value < expected_uptime:
                         logs += f"INFO : {worker_type} : crash_detector() - CRASH detected in iteration {iteration}:" \
-                                f' Expected uptime is {expected_uptime} seconds and the retrieved uptime is {time_tup[1]} seconds.\n' \
-                                f' Last successful iteration is {last_successful_iteration}, it is possible that the crash occurred immediately after that iteration \n'
-                    last_successful_iteration = iteration
+                                f' Expected uptime is {expected_uptime} seconds and the retrieved uptime is {uptime_value} seconds.\n' \
+                                f' Last successful iteration is {last_successful_iteration[0]}, it is possible that the crash occurred immediately after that iteration \n'
+                    last_successful_iteration = (iteration, datetime.strptime(time_tup[0], '%Y-%m-%d %H:%M:%S'), uptime_value)
                 except Exception as e:
                     logs += f"ERROR : {worker_type} : crash_detector() - Couldn't compare uptime values: {e}\n"
-            logs += f"INFO : {worker_type} : crash_detector() - {len(uptimes_dict)} iterations were checked for crashes.\n"
+            logs += f"INFO : {worker_type} : crash_detector() - {len(self.parsed_items_dict[uptime_item])} iterations were checked for crashes.\n"
             logs += f"INFO : {worker_type} : crash_detector() - Operation finished."
             self._write_to_file_hlp(logfile_path=logfile_path, mode='a+', content=logs)
 
@@ -225,3 +215,8 @@ class monitor_utils():
             return rc, msg 
 
         return True, None
+    
+
+a = monitor_utils()
+a.crash_detector( logfile_path='/home/cosmin/Desktop/new_textfile.txt', item_dict={'sysUpTime.0': compile('\d+\:\d+\:\d+\:\d+')}, worker_type = 'unafined')
+a.crash_detector_str( logfile_path='/home/cosmin/Desktop/new_textfile.txt', item_dict={'sysUpTime.0': compile('\d+\:\d+\:\d+\:\d+')}, worker_type = 'unafined')
