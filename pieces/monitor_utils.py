@@ -17,6 +17,12 @@ class monitor_utils():
         self.kwargs = kwargs
         self.parsed_items_dict = defaultdict(list)
 
+    def _write_to_file_hlp(self, logfile_path: str, mode: str, content: str) -> None:
+        '''Helper method. Writes content to file. Does not return anything.'''
+
+        with open(file=logfile_path, mode=mode, encoding='utf-8') as logfile:
+            logfile.write(content)
+
     def parse_logfile(self, logfile_path: str, item_dict: dict, worker_type: str = 'undefined') -> None:
         """
         Parses the logfile and populates a dictionary of {item_1:[(timestamp, value), (timestamp, 'error')], item_2:[(timestamp, value). (timestamp, value)],...}
@@ -28,16 +34,15 @@ class monitor_utils():
 
         logs = f'\nINFO : {worker_type} : parse_logfile() - Checking the items to parse.\n'
 
-        # if there are any items in self.kwargs['parse_items'] then use those, otherwise, use the items passed
-        items_d = self.kwargs['parse_item'] if 'parse_item' in self.kwargs and self.kwargs['parse_item'] else item_dict       
+        # if there are any items in self.kwargs['parse_items'] then use those plus the items passed
+        items_d = self.kwargs['parse_item'] | item_dict if 'parse_item' in self.kwargs else item_dict
         
         # check whether there are any items to parse (not already parsed) and:
         #  if there aren't any, open the file in append and write the log messages at the bottom
         items_d = {item:pattern for item, pattern in items_d.items() if item not in self.parsed_items_dict}
         if not items_d:
             logs += f'WARNING : {worker_type} : parse_logfile() - Nothing to parse. The values of the supplied items have already been parsed.\n'
-            with open(logfile_path, 'a+', encoding='utf-8') as logfile:
-                logfile.write(logs)
+            self._write_to_file_hlp(logfile_path=logfile_path, mode='a+', content=logs)
             return
 
         #  if there are, open the file in read so you can iterate through it and parse the items
@@ -104,8 +109,7 @@ class monitor_utils():
             logs += f"INFO : {worker_type} : generate_statistics() - Finished generating statistics for the items provided.\n"
 
             # iterate through the file and append the results to the dict
-            with open(logfile_path, 'a+', encoding='utf-8') as logfile:
-                logfile.write(logs)
+            self._write_to_file_hlp(logfile_path=logfile_path, mode='a+', content=logs)
 
     def crash_detector(self, logfile_path: str, item_dict: str, worker_type: str = 'undefined') -> None:
             '''
@@ -123,8 +127,7 @@ class monitor_utils():
             uptime_item = str(list(item_dict.keys())[0])
             if not self.parsed_items_dict[uptime_item]:
                 logs += f"ERROR : {worker_type} : crash_detector() - There are no parsed values for '{uptime_item}'. Cannot continue.\n"
-                with open(logfile_path, 'a+', encoding='utf-8') as logfile:
-                    logfile.write(logs)
+                self._write_to_file_hlp(logfile_path=logfile_path, mode='a+', content=logs)
                 return
     
             uptimes_dict = {}
@@ -161,8 +164,7 @@ class monitor_utils():
                     logs += f"ERROR : {worker_type} : crash_detector() - Couldn't compare uptime values: {e}\n"
             logs += f"INFO : {worker_type} : crash_detector() - {len(uptimes_dict)} iterations were checked for crashes.\n"
             logs += f"INFO : {worker_type} : crash_detector() - Operation finished."
-            with open(logfile_path, 'a+', encoding='utf-8') as logfile:
-                logfile.write(logs)
+            self._write_to_file_hlp(logfile_path=logfile_path, mode='a+', content=logs)
 
     # crash_detector() iterates through the logfile and dynamically calculates the expected seconds based on the interval between two distict iterations.
     # thus, it takes into account both the interval between iterations AND the time needed for an iteration to complete, plus an error of 1 seconds. 
