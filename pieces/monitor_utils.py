@@ -100,8 +100,9 @@ class monitor_utils():
                     mmode = multimode(values_list)
                     length = len(values_list)
 
-                    result = f'Stats for item {item} are:\n Minimum: {minimum[0]} (value first recorded at {minimum[1]})\n Maximum: {maximum[0]} (value first recorded at {maximum[1]})\n Average: {average}\n ' \
-                                f'Median: {med}\n Most common values: {mmode}\n Number of values used for the calculations: {length}\n\n'
+                    result = f'Stats for item {item} are:\n Minimum: {minimum[0]} (value first recorded at {minimum[1]})\n ' \
+                             f'Maximum: {maximum[0]} (value first recorded at {maximum[1]})\n Average: {average}\n ' \
+                             f'Median: {med}\n Most common values: {mmode}\n Number of values used for the calculations: {length}\n\n'
                     logs += result
                 except Exception as e:
                     logs += f'\nERROR : {worker_type} : generate_statistics() - Unable to generate statistics for item {item}. Error: {e}\n'
@@ -111,14 +112,13 @@ class monitor_utils():
             # iterate through the file and append the results to the dict
             self._write_to_file_hlp(logfile_path=logfile_path, mode='a+', content=logs)
 
-    def crash_detector(self, logfile_path: str, item_dict: str, worker_type: str = 'undefined') -> None:
-            '''
-            Checks wheter a crash has occurred by comparing the expected uptime and actual uptime, based on the timestamps when these values were retrieved.
-            logfile_path : the path to the logfile that will be searched for crashes
-            pattern : the regex pattern of the uptime value. Must match '0 days, 0:0:0' for CLI and '0:0:00:00.00' for snmp (-Oqvt)
-            item : the item that represent DUT's uptime (sysUpTime.0 for example).
-            worker_type : only for logging purposes.
-            '''
+    def crash_detector(self, logfile_path: str, item_dict: dict, worker_type: str = 'undefined') -> None:
+            '''Checks whether a crash has occurred by comparing the expected and actual uptimes, based on the timestamps
+            of the records.
+            logfile_path: the path to the logfile that will be searched for crashes.
+            item_dict: a dictionary of {'uptime_item':re.compile('uptime_pattern')}.
+                       The pattern must match '0 days, 0:0:0' for CLI and '0:0:00:00.00' for SNMP (-Oqvt)
+            worker_type: the utility used to monitor the DUT. For logging purposes only.'''
 
             self.parse_logfile(logfile_path=logfile_path, item_dict=item_dict, worker_type = worker_type)
 
@@ -130,30 +130,39 @@ class monitor_utils():
                 self._write_to_file_hlp(logfile_path=logfile_path, mode='a+', content=logs)
                 return
 
-            last_successful_iteration = None
-            for iteration, time_tup in enumerate(self.parsed_items_dict[uptime_item], start=1): 
+            last_successful_iteration = None # an iteration which had a valid uptime value (!= 'error')
+            for iteration, time_tup in enumerate(self.parsed_items_dict[uptime_item], start=1):
+                # if the value for the uptime item (sysUpTime.0), could not be retrieved from the logfile, skip the iteration
                 if time_tup[1] == 'error':
                     logs += f"WARNING : {worker_type} : crash_detector() - Error at value retrieval in iteration {iteration}\n"
                     continue
+                # convert the uptime item value (CLI: 0 days, 0:0:0 / SNMP: 0:0:00:00.00) to seconds (pattern '[\D\s]+')
                 uptime_value = [int(''.join(char for char in element if char.isdigit())) for element in split('[\D\s]+', time_tup[1])]
                 uptime_value = 86400*uptime_value[0] + 3600*uptime_value[1] + 60*uptime_value[2] + uptime_value[3]
+                # if no last_successful_iteration exist, record the current one and skip anything else.
                 if not last_successful_iteration:
-                    logs += f"ERROR : {worker_type} : crash_detector() - Couldn't compare uptime values because no previous successful iteration was recorded.\n" \
-                            f'This happened because during none of the iterations before this one (iteration {iteration}) could the uptime be retrieved.\n'
+                    logs += f"ERROR : {worker_type} : crash_detector() - Couldn't compare uptime values because no " \
+                             "previous successful iteration was recorded.\nThis happened because during none of the " \
+                            f"iterations before this one (iteration {iteration}) could the uptime be retrieved.\n"
                     last_successful_iteration = (iteration, datetime.strptime(time_tup[0], '%Y-%m-%d %H:%M:%S'), uptime_value)
                     continue
+                # true_interval is the time interval between the iterations. 
                 true_interval = (datetime.strptime(time_tup[0], '%Y-%m-%d %H:%M:%S') - last_successful_iteration[1]).total_seconds()
                 try:
+                    # expected_uptime is the expected interval between the values of the uptime item
                     expected_uptime = (last_successful_iteration[2] + true_interval) - 1
+                    # if the interval between the values of the uptime item, is lower than the interval between iterations
+                    # (minus 1 second due to the fractions of second needed for processing), then a crash has occurred
                     if uptime_value < expected_uptime:
                         logs += f"INFO : {worker_type} : crash_detector() - CRASH detected in iteration {iteration}:" \
-                                f' Expected uptime is {expected_uptime} seconds and the retrieved uptime is {uptime_value} seconds.\n' \
-                                f' Last successful iteration is {last_successful_iteration[0]}, it is possible that the crash occurred immediately after that iteration \n'
+                                f' Expected uptime is {expected_uptime} seconds and the retrieved uptime is {uptime_value}' \
+                                f' seconds.\nLast successful iteration is {last_successful_iteration[0]}, it is possible' \
+                                 ' that the crash occurred immediately after that iteration. \n'
                     last_successful_iteration = (iteration, datetime.strptime(time_tup[0], '%Y-%m-%d %H:%M:%S'), uptime_value)
                 except Exception as e:
                     logs += f"ERROR : {worker_type} : crash_detector() - Couldn't compare uptime values: {e}\n"
             logs += f"INFO : {worker_type} : crash_detector() - {len(self.parsed_items_dict[uptime_item])} iterations were checked for crashes.\n"
-            logs += f"INFO : {worker_type} : crash_detector() - Operation finished."
+            logs += f"INFO : {worker_type} : crash_detector() - Operation finished.\n"
             self._write_to_file_hlp(logfile_path=logfile_path, mode='a+', content=logs)
 
     # crash_detector() iterates through the logfile and dynamically calculates the expected seconds based on the interval between two distict iterations.
@@ -219,4 +228,3 @@ class monitor_utils():
 
 a = monitor_utils()
 a.crash_detector( logfile_path='/home/cosmin/Desktop/new_textfile.txt', item_dict={'sysUpTime.0': compile('\d+\:\d+\:\d+\:\d+')}, worker_type = 'unafined')
-a.crash_detector_str( logfile_path='/home/cosmin/Desktop/new_textfile.txt', item_dict={'sysUpTime.0': compile('\d+\:\d+\:\d+\:\d+')}, worker_type = 'unafined')
