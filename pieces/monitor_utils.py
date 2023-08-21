@@ -123,8 +123,8 @@ class monitor_utils():
             self.parse_logfile(logfile_path=logfile_path, item_dict=item_dict, worker_type = worker_type)
 
             logs = f'\nINFO : {worker_type} : crash_detector() - Started operation.\n'
-            
-            uptime_item = str(list(item_dict.keys())[0])
+
+            uptime_item = next(iter(item_dict))
             if not self.parsed_items_dict[uptime_item]:
                 logs += f"ERROR : {worker_type} : crash_detector() - There are no parsed values for '{uptime_item}'. Cannot continue.\n"
                 self._write_to_file_hlp(logfile_path=logfile_path, mode='a+', content=logs)
