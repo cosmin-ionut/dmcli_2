@@ -35,8 +35,8 @@ class monitor_utils():
         logs = f'\nINFO : {worker_type} : parse_logfile() - Checking the items to parse.\n'
 
         # if there are any items in self.kwargs['parse_items'] then use those plus the items passed
-        items_d = self.kwargs['parse_item'] | item_dict if 'parse_item' in self.kwargs else item_dict
-        
+        items_d = item_dict | self.kwargs['parse_item'] if 'parse_item' in self.kwargs else item_dict
+
         # check whether there are any items to parse (not already parsed) and:
         #  if there aren't any, open the file in append and write the log messages at the bottom
         items_d = {item:pattern for item, pattern in items_d.items() if item not in self.parsed_items_dict}
@@ -64,7 +64,6 @@ class monitor_utils():
                         break
             logs += f"INFO : {worker_type} : parse_logfile() - Finished parsing the logfile\n"
             logfile.write(logs)
-
 
     def generate_statistics(self, logfile_path: str, item_dict: list, worker_type: str='undefined') -> None:
             """
@@ -224,7 +223,3 @@ class monitor_utils():
             return rc, msg 
 
         return True, None
-    
-
-a = monitor_utils()
-a.crash_detector( logfile_path='/home/cosmin/Desktop/new_textfile.txt', item_dict={'sysUpTime.0': compile('\d+\:\d+\:\d+\:\d+')}, worker_type = 'unafined')

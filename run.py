@@ -158,11 +158,11 @@ class dut_monitor():
 e = dut_monitor(monitor_map=[{'dut':'telnet localhost 20001',
                               'utility':'console_monitor',
                               'items':[('show system info','System uptime'),('show system resources','CPU utilization'), ('show system resources','Allocated RAM'), ('show system temperature limits',"Current temperature")],
-                              'interval':2,
+                              'interval':4,
                               'timeout':None,
                               'statistics':['CPU utilization','Allocated RAM', 'Current temperature'],
                               'detect_crashes':'System uptime'},
-                              {'dut':'16.1.1.10',
+                              {'dut':'15.1.1.10',
                               'utility':'snmp_monitor',
                               'items':['.1.3.6.1.4.1.248.11.22.1.8.11.2.0','.1.3.6.1.4.1.248.11.22.1.8.10.1.0','.1.3.6.1.2.1.1.3.0', 'sysUpTime.0','hm2SfpInfoPartId.1'],
                               'interval':2,
@@ -171,7 +171,7 @@ e = dut_monitor(monitor_map=[{'dut':'telnet localhost 20001',
                               'detect_crashes':'sysUpTime.0'}])
 
 e.run()
-sleep(6000)
+sleep(100)
 e.stop_workers(dut = 'all')
 
 
