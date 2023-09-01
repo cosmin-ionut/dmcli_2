@@ -135,6 +135,8 @@ class monitor_utils():
                 if time_tup[1] == 'error':
                     logs += f"WARNING : {worker_type} : crash_detector() - Error at value retrieval in iteration {iteration}\n"
                     continue
+                # convert the current iteration's timestamp into a datetime object
+                current_iteration_timestamp = datetime.strptime(time_tup[0], '%Y-%m-%d %H:%M:%S')
                 # convert the uptime item value (CLI: 0 days, 0:0:0 / SNMP: 0:0:00:00.00) to seconds (pattern '[\D\s]+')
                 uptime_value = [int(''.join(char for char in element if char.isdigit())) for element in split('[\D\s]+', time_tup[1])]
                 uptime_value = 86400*uptime_value[0] + 3600*uptime_value[1] + 60*uptime_value[2] + uptime_value[3]
@@ -143,10 +145,10 @@ class monitor_utils():
                     logs += f"ERROR : {worker_type} : crash_detector() - Couldn't compare uptime values because no " \
                              "previous successful iteration was recorded.\nThis happened because during none of the " \
                             f"iterations before this one (iteration {iteration}) could the uptime be retrieved.\n"
-                    last_successful_iteration = (iteration, datetime.strptime(time_tup[0], '%Y-%m-%d %H:%M:%S'), uptime_value)
+                    last_successful_iteration = (iteration, current_iteration_timestamp, uptime_value)
                     continue
-                # true_interval is the time interval between the iterations. 
-                true_interval = (datetime.strptime(time_tup[0], '%Y-%m-%d %H:%M:%S') - last_successful_iteration[1]).total_seconds()
+                # true_interval is the time interval between the iterations.
+                true_interval = (current_iteration_timestamp - last_successful_iteration[1]).total_seconds()
                 try:
                     # expected_uptime is the expected interval between the values of the uptime item
                     expected_uptime = (last_successful_iteration[2] + true_interval) - 1
@@ -157,7 +159,7 @@ class monitor_utils():
                                 f' Expected uptime is {expected_uptime} seconds and the retrieved uptime is {uptime_value}' \
                                 f' seconds.\nLast successful iteration is {last_successful_iteration[0]}, it is possible' \
                                  ' that the crash occurred immediately after that iteration. \n'
-                    last_successful_iteration = (iteration, datetime.strptime(time_tup[0], '%Y-%m-%d %H:%M:%S'), uptime_value)
+                    last_successful_iteration = (iteration, current_iteration_timestamp, uptime_value)
                 except Exception as e:
                     logs += f"ERROR : {worker_type} : crash_detector() - Couldn't compare uptime values: {e}\n"
             logs += f"INFO : {worker_type} : crash_detector() - {len(self.parsed_items_dict[uptime_item])} iterations were checked for crashes.\n"
