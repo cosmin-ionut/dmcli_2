@@ -33,15 +33,6 @@ class snmp_monitor(Thread):
         self.utility = profile['utility']
         self.item_list = list(set(profile['items'])) # can contain either OIDs or MIBs. The conversion is done to remove duplicate items
         self.iteration_number = 1 # the index of the iteration
-        # end-thread functionalities
-        parse_items = {}
-        if 'statistics' in profile:
-            self.statistics = {item: compile("\s\s[0-9]+\s") for item in  profile['statistics']}
-            parse_items.update(self.statistics)
-        if 'detect_crashes' in profile:
-            self.detect_crashes = {profile['detect_crashes']: compile('\d+\:\d+\:\d+\:\d+')}
-            parse_items.update(self.detect_crashes)
-        self.utils = monitor_utils(parse_item = parse_items)
         # stop mechanism
         self.thread_sleep = Event()
         self.stopped = Event()   # | these two work the thread stop mechanism
@@ -63,7 +54,7 @@ class snmp_monitor(Thread):
             except Exception as e:
                 self.logger.info(f'ITEM: {item} query result: ERROR: {str(e).rstrip()}')
         self.logger.info(129*'#' + 3*'\n')
-        
+    '''        
     def snmp_querier_new(self):
         self.logger.info(50*'#' + f" Iteration number #{self.iteration_number} started " + 50*'#')
         try:
@@ -75,7 +66,7 @@ class snmp_monitor(Thread):
         except Exception as e:
             self.logger.info(f'ITEM: {item} query result: ERROR: {str(e).rstrip()}')
         self.logger.info(129*'#' + 3*'\n')
-
+    '''
     def run(self):
         self.logger.info(f"INFO : SNMP-MONITOR : run() - Thread operation started.\n\n\n")
         if not self.endtime:
@@ -99,6 +90,16 @@ class snmp_monitor(Thread):
             self.utils.crash_detector(logfile_path=self.logfile_path, 
                                       item_dict=self.detect_crashes, worker_type='SNMP_MONITOR')
         self.stopped.set()
+        
+    def end_thread_processing(self):
+        parse_items = {}
+        self.statistics = {item: compile("\s\s[0-9]+\s") for item in profile['statistics']}
+        parse_items.update(self.statistics)
+        self.detect_crashes = {profile['detect_crashes']: compile('\d+\:\d+\:\d+\:\d+')}
+        parse_items.update(self.detect_crashes)
+        utils = monitor_utils(parse_item = parse_items)
+        utils.parse_logfile()
+        
         
     def stop(self):
         self.logger.info(f"INFO : SNMP-MONITOR : stop() - Thread stop command received.")

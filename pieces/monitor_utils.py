@@ -65,7 +65,7 @@ class monitor_utils():
             logs += f"INFO : {worker_type} : parse_logfile() - Finished parsing the logfile\n"
             logfile.write(logs)
 
-    def generate_statistics(self, logfile_path: str, item_dict: list, worker_type: str='undefined') -> None:
+    def generate_statistics(self, logfile_path: str, item_list: list, worker_type: str='undefined') -> None:
             """
             The method searches for the items, through a logfile. For each item, from every line in the logfile it is present,
             extracts its value and calculates various statistics.
@@ -78,11 +78,13 @@ class monitor_utils():
             :worker_type: Optional. the worker type used to generate the logfile.
             """
 
-            self.parse_logfile(logfile_path=logfile_path, item_dict=item_dict, worker_type = worker_type)
-
             logs = f'\nINFO : {worker_type} : generate_statistics() - Started generating statistics.\n'
 
-            for item in item_dict:
+            for item in item_list:
+
+                if item not in self.parsed_items_dict:
+                    logs += f'\nERROR : {worker_type} : generate_statistics() - Item {item} is not parsed from the logfile. Make sure to execute parse_logfile(). Skipping it.\n'
+                    continue
 
                 timestamp_list = [val_tup[0] for val_tup in self.parsed_items_dict[item] if val_tup[1] != 'error']
                 try:
@@ -111,7 +113,7 @@ class monitor_utils():
             # iterate through the file and append the results to the dict
             self._write_to_file_hlp(logfile_path=logfile_path, mode='a+', content=logs)
 
-    def crash_detector(self, logfile_path: str, item_dict: dict, worker_type: str = 'undefined') -> None:
+    def crash_detector(self, logfile_path: str, uptime_item: str, worker_type: str = 'undefined') -> None:
             '''Checks whether a crash has occurred by comparing the expected and actual uptimes, based on the timestamps
             of the records.
             logfile_path: the path to the logfile that will be searched for crashes.
@@ -119,12 +121,9 @@ class monitor_utils():
                        The pattern must match '0 days, 0:0:0' for CLI and '0:0:00:00.00' for SNMP (-Oqvt)
             worker_type: the utility used to monitor the DUT. For logging purposes only.'''
 
-            self.parse_logfile(logfile_path=logfile_path, item_dict=item_dict, worker_type = worker_type)
-
             logs = f'\nINFO : {worker_type} : crash_detector() - Started operation.\n'
 
-            uptime_item = next(iter(item_dict))
-            if not self.parsed_items_dict[uptime_item]:
+            if uptime_item not in self.parsed_items_dict or not self.parsed_items_dict[uptime_item]:
                 logs += f"ERROR : {worker_type} : crash_detector() - There are no parsed values for '{uptime_item}'. Cannot continue.\n"
                 self._write_to_file_hlp(logfile_path=logfile_path, mode='a+', content=logs)
                 return
