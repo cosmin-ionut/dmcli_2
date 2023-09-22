@@ -198,7 +198,34 @@ class monitor_utils():
             return (False, 'snmpget is needed to use snmp_monitor utility but it is not installed or reported errors during version check')
         
         return True, None
+    
+    def get_item_value_change(self, logfile_path: str, item_list: list, worker_type: str = 'undefined') -> None:
+        '''Checks whether an item had a change in value, and when did it occur.
+        Verifies the item directly from self.parsed_items_dict so parse_logfile() has to be called first.
+        logfile_path: the path to the logfile where the results will be written.
+        item_list: the list of items whose change in values will be retrieved.
+        worker_type: the utility used to monitor the DUT. For logging purposes only.'''
+        
+        logs = f'\nINFO : {worker_type} : get_item_value_change() - Started operation.\n'
 
+        for item in item_list:
+            logs += f"INFO : {worker_type} : get_item_value_change() - Now checking the values of '{item}'.\n"
+            default_value = None
+            for timestamp_value_tuple in self.parsed_items_dict[item]:
+                if timestamp_value_tuple[1] == 'error':
+                    logs += f"WARNING : {worker_type} : get_item_value_change() - Cannot check if there was a value change at " \
+                            f"{timestamp_value_tuple[0]} because there was an 'error' in retrieving it.\n"
+                elif not default_value:
+                    logs += f"INFO : {worker_type} : get_item_value_change() - The first value of item {item} " \
+                            f"is {timestamp_value_tuple[1]} retrieved at {timestamp_value_tuple[0]}.\n"
+                    default_value = timestamp_value_tuple[1]
+                elif timestamp_value_tuple[1] != default_value:
+                    logs += f"INFO : {worker_type} : get_item_value_change() - A change in value of {item} " \
+                            f"from {default_value} to {timestamp_value_tuple[1]} was detected at {timestamp_value_tuple[0]}.\n"
+                    default_value = timestamp_value_tuple[1]
+            logs += f"INFO : {worker_type} : get_item_value_change() - Finished checking the change in values of {item}.\n"
+
+        self._write_to_file_hlp(logfile_path=logfile_path, mode='a+', content=logs)
 
     def environment_check(self, utility:str) -> tuple:
         '''Checks whether the requirements for running the app are met or not.\n

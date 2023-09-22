@@ -63,6 +63,18 @@ class snmp_monitor(Thread):
             except Exception as e:
                 self.logger.info(f'ITEM: {item} query result: ERROR: {str(e).rstrip()}')
         self.logger.info(129*'#' + 3*'\n')
+        
+    def snmp_querier_new(self):
+        self.logger.info(50*'#' + f" Iteration number #{self.iteration_number} started " + 50*'#')
+        try:
+            result = run_proc(['snmpget', '-Oqv', '-v3', '-l', 'authPriv', '-u', 'admin', '-a', 'MD5', '-A', 'privateprivate',
+                             '-x', 'DES', '-X', 'privateprivate', self.dut_ip].extend(self.item_list), capture_output=True, encoding='utf-8')
+            if result.stdout.replace(" ", '') == '':
+                raise Exception(result.stderr)
+            self.logger.info(f'ITEM: {item} query result:  {result.stdout.rstrip()}')
+        except Exception as e:
+            self.logger.info(f'ITEM: {item} query result: ERROR: {str(e).rstrip()}')
+        self.logger.info(129*'#' + 3*'\n')
 
     def run(self):
         self.logger.info(f"INFO : SNMP-MONITOR : run() - Thread operation started.\n\n\n")
