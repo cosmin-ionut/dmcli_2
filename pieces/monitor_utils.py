@@ -108,7 +108,7 @@ class monitor_utils():
                 except Exception as e:
                     logs += f'\nERROR : {worker_type} : generate_statistics() - Unable to generate statistics for item {item}. Error: {e}\n'
             
-            logs += f"INFO : {worker_type} : generate_statistics() - Finished generating statistics for the items provided.\n"
+            logs += f"\nINFO : {worker_type} : generate_statistics() - Finished generating statistics for the items provided.\n"
 
             # iterate through the file and append the results to the dict
             self._write_to_file_hlp(logfile_path=logfile_path, mode='a+', content=logs)
@@ -209,9 +209,9 @@ class monitor_utils():
 
         for item in item_list:
 
-            logs += f"INFO : {worker_type} : get_item_value_change() - Now checking the values of '{item}'.\n"
+            logs += f"\nINFO : {worker_type} : get_item_value_change() - Now checking the values of '{item}'.\n"
             if item not in self.parsed_items_dict:
-                logs += f'\nERROR : {worker_type} : get_item_value_change() - Item {item} is not parsed from the logfile.' \
+                logs += f'ERROR : {worker_type} : get_item_value_change() - Item {item} is not parsed from the logfile.' \
                         ' Make sure to call parse_logfile() before calling this method. Skipping it.\n'
                 continue
             default_value = None

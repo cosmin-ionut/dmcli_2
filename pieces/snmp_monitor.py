@@ -80,7 +80,7 @@ class snmp_monitor(Thread):
             if self.stop_thread:
                 self.logger.info(f"WARNING : SNMP-MONITOR : run() - Thread stopped ahead of time due to a call to stop().")
                 break
-            #self.snmp_querier()
+            self.snmp_querier()
             print(f'I am working. Iteration number {self.iteration_number}')
             self.iteration_number += 1
             self.thread_sleep.wait(timeout=self.profile['interval'])
