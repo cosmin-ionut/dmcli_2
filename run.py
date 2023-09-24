@@ -13,9 +13,6 @@ class dut_monitor():
     """
 
     def __init__(self, monitor_map: list) -> None:
-        '''
-
-        '''
         
         # generate a start time for sync purposes and configure the logger
         self.start_time = datetime.now()
@@ -155,24 +152,17 @@ class dut_monitor():
             exit(1)
 
 
-e = dut_monitor(monitor_map=[{'dut':'telnet localhost 20001',
-                              'utility':'console_monitor',
-                              'items':[('show system info','System uptime'),('show system resources','CPU utilization'), ('show system resources','Allocated RAM'), ('show system temperature limits',"Current temperature")],
-                              'interval':4,
-                              'timeout':None,
-                              'statistics':['CPU utilization','Allocated RAM', 'Current temperature'],
-                              'detect_crashes':'System uptime'},
-                              {'dut':'15.1.1.10',
+e = dut_monitor(monitor_map=[{'dut':'15.1.1.10',
                               'utility':'snmp_monitor',
-                              'items':['.1.3.6.1.4.1.248.11.22.1.8.11.2.0','.1.3.6.1.4.1.248.11.22.1.8.10.1.0','.1.3.6.1.2.1.1.3.0', 'sysUpTime.0','hm2SfpInfoPartId.1'],
+                              'items':['hm2LogTempMaximum.0','hm2PoeMgmtModuleDeliveredPower.1.1','hm2DiagCpuUtilization.0', 'sysUpTime.0','hm2DiagMemoryRamFree.0','hm2LogTempMinimum.0'],
                               'interval':2,
-                              'timeout':None,
-                              'statistics':['.1.3.6.1.4.1.248.11.22.1.8.11.2.0','.1.3.6.1.4.1.248.11.22.1.8.10.1.0','.1.3.6.1.2.1.1.3.0', 'sysUpTime.0'],
+                              'timeout':5,
+                              'statistics':['hm2LogTempMaximum.0','hm2PoeMgmtModuleDeliveredPower.1.1','hm2DiagCpuUtilization.0','hm2DiagMemoryRamFree.0','hm2LogTempMinimum.0'],
+                              'check_values_change':['hm2LogTempMaximum.0','hm2PoeMgmtModuleDeliveredPower.1.1','hm2DiagCpuUtilization.0','hm2DiagMemoryRamFree.0','hm2LogTempMinimum.0'],
                               'detect_crashes':'sysUpTime.0'}])
-
 e.run()
-sleep(100)
-e.stop_workers(dut = 'all')
+sleep(10)
+e.join_workers(dut = 'all')
 
 
 '''

@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta
-from re import compile, split, match
+from datetime import datetime
+from re import split
 from subprocess import run, CalledProcessError
 from sys import version_info
 from importlib import util
@@ -23,7 +23,7 @@ class monitor_utils():
         with open(file=logfile_path, mode=mode, encoding='utf-8') as logfile:
             logfile.write(content)
 
-    def parse_logfile(self, logfile_path: str, item_dict: dict, worker_type: str = 'undefined') -> None:
+    def parse_logfile(self, logfile_path: str, item_dict: dict = {}, worker_type: str = 'undefined') -> None:
         """
         Parses the logfile and populates a dictionary of {item_1:[(timestamp, value), (timestamp, 'error')], item_2:[(timestamp, value). (timestamp, value)],...}
         If a value can't be retrieved based on the regex pattern provided
@@ -78,7 +78,7 @@ class monitor_utils():
             :worker_type: Optional. the worker type used to generate the logfile.
             """
 
-            logs = f'\nINFO : {worker_type} : generate_statistics() - Started generating statistics.\n'
+            logs = f'\nINFO : {worker_type} : generate_statistics() - Started generating statistics.\n\n'
 
             for item in item_list:
 
@@ -117,8 +117,8 @@ class monitor_utils():
             '''Checks whether a crash has occurred by comparing the expected and actual uptimes, based on the timestamps
             of the records.
             logfile_path: the path to the logfile that will be searched for crashes.
-            item_dict: a dictionary of {'uptime_item':re.compile('uptime_pattern')}.
-                       The pattern must match '0 days, 0:0:0' for CLI and '0:0:00:00.00' for SNMP (-Oqvt)
+            uptime_item: the item whose value represents the uptime of a device.
+                         the item must already be parsed in self.parsed_items_dict when this method is called.
             worker_type: the utility used to monitor the DUT. For logging purposes only.'''
 
             logs = f'\nINFO : {worker_type} : crash_detector() - Started operation.\n'
@@ -208,7 +208,12 @@ class monitor_utils():
         logs = f'\nINFO : {worker_type} : get_item_value_change() - Started operation.\n'
 
         for item in item_list:
+
             logs += f"INFO : {worker_type} : get_item_value_change() - Now checking the values of '{item}'.\n"
+            if item not in self.parsed_items_dict:
+                logs += f'\nERROR : {worker_type} : get_item_value_change() - Item {item} is not parsed from the logfile.' \
+                        ' Make sure to call parse_logfile() before calling this method. Skipping it.\n'
+                continue
             default_value = None
             for timestamp_value_tuple in self.parsed_items_dict[item]:
                 if timestamp_value_tuple[1] == 'error':
