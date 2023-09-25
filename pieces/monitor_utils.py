@@ -216,17 +216,18 @@ class monitor_utils():
                 continue
             default_value = None
             for timestamp_value_tuple in self.parsed_items_dict[item]:
-                if timestamp_value_tuple[1] == 'error':
+                current_value = timestamp_value_tuple[1].strip()
+                if current_value == 'error':
                     logs += f"WARNING : {worker_type} : get_item_value_change() - Cannot check if there was a value change at " \
-                            f"{timestamp_value_tuple[0]} because there was an 'error' in retrieving it.\n"
+                            f"{timestamp_value_tuple[0]} because there was an 'error' in parsing it.\n"
                 elif not default_value:
                     logs += f"INFO : {worker_type} : get_item_value_change() - The first value of item {item} " \
-                            f"is {timestamp_value_tuple[1]} retrieved at {timestamp_value_tuple[0]}.\n"
-                    default_value = timestamp_value_tuple[1]
-                elif timestamp_value_tuple[1] != default_value:
+                            f"is {current_value} retrieved at {timestamp_value_tuple[0]}.\n"
+                    default_value = current_value
+                elif current_value != default_value:
                     logs += f"INFO : {worker_type} : get_item_value_change() - A change in value of {item} " \
-                            f"from {default_value} to {timestamp_value_tuple[1]} was detected at {timestamp_value_tuple[0]}.\n"
-                    default_value = timestamp_value_tuple[1]
+                            f"from {default_value} to {current_value} was detected at {timestamp_value_tuple[0]}.\n"
+                    default_value = current_value
             logs += f"INFO : {worker_type} : get_item_value_change() - Finished checking the change in values of {item}.\n"
 
         self._write_to_file_hlp(logfile_path=logfile_path, mode='a+', content=logs)

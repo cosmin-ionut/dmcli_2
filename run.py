@@ -157,9 +157,11 @@ e = dut_monitor(monitor_map=[{'dut':'15.1.1.10',
                               'items':['hm2LogTempMaximum.0','hm2PoeMgmtModuleDeliveredPower.1.1','hm2DiagCpuUtilization.0', 'sysUpTime.0','hm2DiagMemoryRamFree.0','hm2LogTempMinimum.0'],
                               'interval':2,
                               'timeout':5,
-                              'statistics':['hm2LogTempMaximum.0','hm2PoeMgmtModuleDeliveredPower.1.1','hm2DiagCpuUtilization.0','hm2DiagMemoryRamFree.0','hm2LogTempMinimum.0'],
-                              'check_values_change':['hm2LogTempMaximum.0','hm2PoeMgmtModuleDeliveredPower.1.1','hm2DiagCpuUtilization.0','hm2DiagMemoryRamFree.0','hm2LogTempMinimum.0'],
-                              'detect_crashes':'sysUpTime.0'}])
+                              #'statistics':['hm2LogTempMaximum.0','hm2PoeMgmtModuleDeliveredPower.1.1','hm2DiagCpuUtilization.0','hm2DiagMemoryRamFree.0','hm2LogTempMinimum.0'],
+                              'check_values_change':['hm2LogTempMaximum.0','hm2PoeMgmtModuleDeliveredPower.1.1','hm2DiagCpuUtilization.0','hm2DiagMemoryRamFree.0','hm2LogTempMinimum.0',
+                                                     'pethPsePortPowerClassifications.1.8',
+                                                     'ifMauType.4.1']}])
+                              #'detect_crashes':'sysUpTime.0'}])
 e.run()
 sleep(10)
 e.join_workers(dut = 'all')

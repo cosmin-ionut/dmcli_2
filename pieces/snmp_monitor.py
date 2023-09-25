@@ -38,7 +38,8 @@ class snmp_monitor(Thread):
         self.daemon = True
         # end thread processing
         self.statistics = {item: compile("\s\s[0-9]+\s") for item in profile['statistics']} if 'statistics' in profile else {}
-        self.detect_crashes = {profile['detect_crashes']: compile('\d+\:\d+\:\d+\:\d+')} if 'detect_crashes' in profile else {}      
+        self.detect_crashes = {profile['detect_crashes']: compile('\d+\:\d+\:\d+\:\d+')} if 'detect_crashes' in profile else {}
+        self.check_values_change = {item: compile("\s\s.+\s") for item in profile['check_values_change']} if 'check_values_change' in profile else {}
 
     def snmp_querier(self):
         '''
@@ -89,6 +90,7 @@ class snmp_monitor(Thread):
         
     def end_thread_processing(self):
         parse_items = {}
+        parse_items.update(self.check_values_change)
         parse_items.update(self.statistics)
         parse_items.update(self.detect_crashes)
         utils = monitor_utils(parse_item = parse_items)
@@ -99,7 +101,7 @@ class snmp_monitor(Thread):
         if self.detect_crashes:
             utils.crash_detector(logfile_path=self.logfile_path, uptime_item=self.profile['detect_crashes'],
                                  worker_type='SNMP_MONITOR')
-        if 'check_values_change' in self.profile:
+        if self.check_values_change:
             utils.get_item_value_change(logfile_path=self.logfile_path, item_list=self.profile['check_values_change'],
                                         worker_type='SNMP_MONITOR')
 
