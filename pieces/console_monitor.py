@@ -13,13 +13,12 @@ class console_monitor(Thread):
 
         Thread.__init__(self)
         
-        # time settings and default values
-        self.interval = profile['interval']
-        self.start_time = profile['start_time']
+        self.profile = profile
+        
         # set the endtime of the whole monitoring process 
-        self.endtime = self.start_time + timedelta(seconds=profile['timeout']) if profile['timeout'] else None 
+        self.endtime = profile['start_time'] + timedelta(seconds=profile['timeout']) if profile['timeout'] else None 
         #logfile configuration
-        self.logfile_path = f"logfile_cli_{profile['dut'].replace(' ','_')}_{self.start_time.strftime('%d_%b_%Y_%H_%M_%S')}.log"
+        self.logfile_path = f"logfile_cli_{profile['dut'].replace(' ','_')}_{profile['start_time'].strftime('%d_%b_%Y_%H_%M_%S')}.log"
         self.logger = logging.getLogger(f"{profile['dut'].replace(' ','_')}_cli")
         self.logger.setLevel(logging.DEBUG)
         logfile_handler = logging.FileHandler(self.logfile_path)
@@ -29,21 +28,15 @@ class console_monitor(Thread):
 
         # other settings
         self.utility = profile['utility']
-        self.dut_cli = profile['dut'] # the ser2net console of the DUT | telnet localhost 30000
         self.item_list = list(set(profile['items'])) # can contain either OIDs or MIBs. The conversion is done to remove duplicate items
         #self.item_list = item_list
         self.iteration_number = 1 # the index of the iteration
         self.connection = False
         self.error_counter = 0
-        # end-thread functionalities
-        parse_items = {}
-        if 'statistics' in profile:
-            self.statistics = {item: compile("\\B\s\s[0-9a-zA-Z\-\.\\\/]+") for item in profile['statistics']}
-            parse_items.update(self.statistics)
-        if 'detect_crashes' in profile:
-            self.detect_crashes = {profile['detect_crashes']: compile('\d+\sdays?.*\d+.*\d+.*\d+')}
-            parse_items.update(self.detect_crashes)
-        self.utils = monitor_utils(parse_item = parse_items)
+        # end-thread processing
+        self.statistics = {item: compile("\\B\s\s[0-9a-zA-Z\-\.\\\/]+") for item in profile['statistics']} if 'statistics' in profile else {}
+        self.detect_crashes = {profile['detect_crashes']: compile('\d+\sdays?.*\d+.*\d+.*\d+')} if 'detect_crashes' in profile else {}
+        self.check_values_change = {item: compile("change_the_pattern_here") for item in profile['check_values_change']} if 'check_values_change' in profile else {}
         # stop mechanism
         self.thread_sleep = Event()
         self.stopped = Event()   # | these two work the thread stop mechanism
@@ -52,7 +45,7 @@ class console_monitor(Thread):
 
     def spawn_cli_connection(self):
         
-        command = self.dut_cli
+        command = self.profile['dut']
         self.logger.info(f"INFO : CLI-MONITOR : spawn_cli_connection() - Spawning new CLI connection to DUT")
 
         while True:
@@ -224,14 +217,32 @@ class console_monitor(Thread):
             print(f'I am working. Iteration number {self.iteration_number}')
             self.cli_querier()
             self.iteration_number += 1
-            self.thread_sleep.wait(timeout=self.interval)
+            self.thread_sleep.wait(timeout=self.profile['interval'])
         if self.statistics:
             self.utils.generate_statistics(logfile_path=self.logfile_path, item_dict=self.statistics, worker_type='CONSOLE-MONITOR')
         if self.detect_crashes:
             self.utils.crash_detector(logfile_path=self.logfile_path, item_dict=self.detect_crashes, worker_type='CONSOLE-MONITOR')
         if self.connection:
             self.connection.close()
+        self.end_thread_processing()
         self.stopped.set()
+        
+    def end_thread_processing(self):
+        parse_items = {}
+        parse_items.update(self.check_values_change)
+        parse_items.update(self.statistics)
+        parse_items.update(self.detect_crashes)
+        utils = monitor_utils(parse_item = parse_items)
+        utils.parse_logfile(logfile_path=self.logfile_path, worker_type='CONSOLE_MONITOR')
+        if self.statistics:
+            utils.generate_statistics(logfile_path=self.logfile_path, item_list = self.profile['statistics'],
+                                      worker_type='CONSOLE_MONITOR')
+        if self.detect_crashes:
+            utils.crash_detector(logfile_path=self.logfile_path, uptime_item=self.profile['detect_crashes'],
+                                 worker_type='CONSOLE_MONITOR')
+        if self.check_values_change:
+            utils.get_item_value_change(logfile_path=self.logfile_path, item_list=self.profile['check_values_change'],
+                                        worker_type='CONSOLE_MONITOR')
 
     def stop(self):
         self.logger.info(f"INFO : CLI-MONITOR : stop() - Thread stop command received.")
