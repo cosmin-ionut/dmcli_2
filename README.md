@@ -8,6 +8,9 @@
 2. **limitation**: `parse_logfile()` uses lazy iteration when going through the logfile and parsing values. However, the parsed values are stored in memory, which might prove problematic if there are too many items to be parsed, each having too many values.<br />
    **mitigation**: none.
 
+3. **limitation**: `statistics` profile key MUST contain only items that have numeric values: 18%, -5, 1.1, etc. Do NOT use for other type of values, as this will break its interaction with
+                    `detect_crashes` and `get_item_value_change`
+
   
 **FUTURE IDEAS**:
 1. `console_monitor` can be changed to support multiple utilities as follows:

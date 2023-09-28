@@ -34,9 +34,9 @@ class console_monitor(Thread):
         self.connection = False
         self.error_counter = 0
         # end-thread processing
-        self.statistics = {item: compile("\\B\s\s[0-9a-zA-Z\-\.\\\/]+") for item in profile['statistics']} if 'statistics' in profile else {}
+        self.statistics = {item: compile("\\B\s\s[0-9\-\.\\\/]+") for item in profile['statistics']} if 'statistics' in profile else {}
         self.detect_crashes = {profile['detect_crashes']: compile('\d+\sdays?.*\d+.*\d+.*\d+')} if 'detect_crashes' in profile else {}
-        self.check_values_change = {item: compile("change_the_pattern_here") for item in profile['check_values_change']} if 'check_values_change' in profile else {}
+        self.check_values_change = {item: compile("\\B\s\s.*") for item in profile['check_values_change']} if 'check_values_change' in profile else {}
         # stop mechanism
         self.thread_sleep = Event()
         self.stopped = Event()   # | these two work the thread stop mechanism
@@ -218,10 +218,6 @@ class console_monitor(Thread):
             self.cli_querier()
             self.iteration_number += 1
             self.thread_sleep.wait(timeout=self.profile['interval'])
-        if self.statistics:
-            self.utils.generate_statistics(logfile_path=self.logfile_path, item_dict=self.statistics, worker_type='CONSOLE-MONITOR')
-        if self.detect_crashes:
-            self.utils.crash_detector(logfile_path=self.logfile_path, item_dict=self.detect_crashes, worker_type='CONSOLE-MONITOR')
         if self.connection:
             self.connection.close()
         self.end_thread_processing()
