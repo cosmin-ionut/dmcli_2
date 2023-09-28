@@ -154,14 +154,34 @@ class dut_monitor():
 
 e = dut_monitor(monitor_map=[{'dut':'15.1.1.10',
                               'utility':'snmp_monitor',
-                              'items':['hm2LogTempMaximum.0','hm2PoeMgmtModuleDeliveredPower.1.1','hm2DiagCpuUtilization.0', 'sysUpTime.0','hm2DiagMemoryRamFree.0','hm2LogTempMinimum.0'],
+                              'items':['hm2LogTempMaximum.0','hm2PoeMgmtModuleDeliveredPower.1.1','hm2DiagCpuUtilization.0',
+                                       'sysUpTime.0','hm2DiagMemoryRamFree.0','hm2LogTempMinimum.0'],
                               'interval':2,
                               'timeout':5,
-                              #'statistics':['hm2LogTempMaximum.0','hm2PoeMgmtModuleDeliveredPower.1.1','hm2DiagCpuUtilization.0','hm2DiagMemoryRamFree.0','hm2LogTempMinimum.0'],
-                              'check_values_change':['hm2LogTempMaximum.0','hm2PoeMgmtModuleDeliveredPower.1.1','hm2DiagCpuUtilization.0','hm2DiagMemoryRamFree.0','hm2LogTempMinimum.0',
+                              #'statistics':['hm2LogTempMaximum.0','hm2PoeMgmtModuleDeliveredPower.1.1',
+                              #              'hm2DiagCpuUtilization.0','hm2DiagMemoryRamFree.0','hm2LogTempMinimum.0'],
+                              'check_values_change':['hm2LogTempMaximum.0','hm2PoeMgmtModuleDeliveredPower.1.1',
+                                                     'hm2DiagCpuUtilization.0','hm2DiagMemoryRamFree.0','hm2LogTempMinimum.0',
                                                      'pethPsePortPowerClassifications.1.8',
                                                      'ifMauType.4.1']}])
                               #'detect_crashes':'sysUpTime.0'}])
+                              
+e = dut_monitor(monitor_map=[{'dut':'telnet localhost 20000',
+                              'utility':'console_monitor',
+                              'items':[('show system info','System Description'),('show system info','System uptime'),
+                                       ('show system info','Operating hours'), ('show system info','Current temperature'),
+                                       ('show system info','Current humidity'), ('show system resources','CPU utilization'),
+                                       ('show system resources','Free RAM'), ('show system resources','Network CPU interface utilization average')],
+                              'interval':2,
+                              'timeout':30,
+                              'statistics':['Current temperature','Current humidity','CPU utilization','Free RAM',
+                                            'Network CPU interface utilization average'],
+                              'check_values_change':['System Description','System uptime','Operating hours',
+                                                     'Current temperature','Current humidity','CPU utilization',
+                                                     'Free RAM','Network CPU interface utilization average'],
+                              'detect_crashes':'System uptime'}])              
+                
+                              
 e.run()
 sleep(10)
 e.join_workers(dut = 'all')
