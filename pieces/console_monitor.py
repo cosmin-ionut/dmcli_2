@@ -235,7 +235,7 @@ class console_monitor(Thread):
                                       worker_type='CONSOLE_MONITOR')
         if self.detect_crashes:
             utils.crash_detector(logfile_path=self.logfile_path, uptime_item=self.profile['detect_crashes'],
-                                 worker_type='CONSOLE_MONITOR')
+                                 uptime_type='time', worker_type='CONSOLE_MONITOR')
         if self.check_values_change:
             utils.get_item_value_change(logfile_path=self.logfile_path, item_list=self.profile['check_values_change'],
                                         worker_type='CONSOLE_MONITOR')

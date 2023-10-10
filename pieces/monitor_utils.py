@@ -113,12 +113,13 @@ class monitor_utils():
             # iterate through the file and append the results to the dict
             self._write_to_file_hlp(logfile_path=logfile_path, mode='a+', content=logs)
 
-    def crash_detector(self, logfile_path: str, uptime_item: str, worker_type: str = 'undefined') -> None:
+    def crash_detector(self, logfile_path: str, uptime_item: str, uptime_type=None, worker_type: str = 'undefined') -> None:
             '''Checks whether a crash has occurred by comparing the expected and actual uptimes, based on the timestamps
             of the records.
             logfile_path: the path to the logfile that will be searched for crashes.
             uptime_item: the item whose value represents the uptime of a device.
                          the item must already be parsed in self.parsed_items_dict when this method is called.
+            uptime_type: the format of the uptime values. For example, time format (snmp/cli) or timeticks (snmp).
             worker_type: the utility used to monitor the DUT. For logging purposes only.'''
 
             logs = f'\nINFO : {worker_type} : crash_detector() - Started operation.\n'
@@ -136,9 +137,13 @@ class monitor_utils():
                     continue
                 # convert the current iteration's timestamp into a datetime object
                 current_iteration_timestamp = datetime.strptime(time_tup[0], '%Y-%m-%d %H:%M:%S')
-                # convert the uptime item value (CLI: 0 days, 0:0:0 / SNMP: 0:0:00:00.00) to seconds (pattern '[\D\s]+')
-                uptime_value = [int(''.join(char for char in element if char.isdigit())) for element in split('[\D\s]+', time_tup[1])]
-                uptime_value = 86400*uptime_value[0] + 3600*uptime_value[1] + 60*uptime_value[2] + uptime_value[3]
+                if uptime_type == 'timestring':
+                    # convert the uptime item value (CLI: 0 days, 0:0:0 / SNMP: 0:0:00:00.00) to seconds (pattern '[\D\s]+')
+                    uptime_value = [int(''.join(char for char in element if char.isdigit())) for element in split('[\D\s]+', time_tup[1])]
+                    uptime_value = 86400*uptime_value[0] + 3600*uptime_value[1] + 60*uptime_value[2] + uptime_value[3]
+                else:
+                    # convert SNMP timeticks to seconds
+                    uptime_value = int(time_tup[1])/100
                 # if no last_successful_iteration exist, record the current one and skip anything else.
                 if not last_successful_iteration:
                     logs += f"ERROR : {worker_type} : crash_detector() - Couldn't compare uptime values because no " \
@@ -190,6 +195,9 @@ class monitor_utils():
         '''Helper method. Checks whether the requirements for 'snmp_monitor' utility are met or not. Returns:
         * tuple: (True, None) if requirements are met;
         * tuple: (False, 'err_msg') if requirements are not met.'''
+
+        if not util.find_spec('netsnmp'):
+            return (False, 'NETSNMP PYTHON module is needed to use snmp_monitor utility')
 
         try:
             run(['snmpget', '-V'], capture_output=True, check=True)

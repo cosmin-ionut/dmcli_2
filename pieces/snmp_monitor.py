@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta
 from threading import Thread, Event
-from subprocess import run as run_proc
 import logging
 from pieces.monitor_utils import monitor_utils
 from re import compile
+from netsnmp import *
 
 class snmp_monitor(Thread):
     '''
@@ -38,8 +38,19 @@ class snmp_monitor(Thread):
         self.daemon = True
         # end thread processing
         self.statistics = {item: compile("\s\s[0-9]+\s") for item in profile['statistics']} if 'statistics' in profile else {}
-        self.detect_crashes = {profile['detect_crashes']: compile('\d+\:\d+\:\d+\:\d+')} if 'detect_crashes' in profile else {}
+        self.detect_crashes = {profile['detect_crashes']: compile("\s\s[0-9]+\s")} if 'detect_crashes' in profile else {}
         self.check_values_change = {item: compile("\s\s.+\s") for item in profile['check_values_change']} if 'check_values_change' in profile else {}
+        # configure the snmp session
+        self.snmp_session = Session(DestHost=self.profile['dut'],
+        Version=3,
+        Community=None,
+        SecLevel='authPriv',
+        SecName='admin',
+        PrivProto='DES',
+        PrivPass='privateprivate',
+        AuthProto='MD5',
+        AuthPass='privateprivate',
+        UseNumeric = 1)
 
     def snmp_querier(self):
         '''
@@ -48,27 +59,12 @@ class snmp_monitor(Thread):
         self.logger.info(50*'#' + f" Iteration number #{self.iteration_number} started " + 50*'#')
         for item in self.item_list:
             try:
-                result = run_proc(['snmpget', '-Oqv', '-v3', '-l', 'authPriv', '-u', 'admin', '-a', 'MD5', '-A', 'privateprivate',
-                             '-x', 'DES', '-X', 'privateprivate', self.profile['dut'], item], capture_output=True, encoding='utf-8')
-                if result.stdout.replace(" ", '') == '':
-                    raise Exception(result.stderr)
+                result = str(self.snmp_session.get(VarList(item))[0], 'UTF-8')
                 self.logger.info(f'ITEM: {item} query result:  {result.stdout.rstrip()}')
             except Exception as e:
                 self.logger.info(f'ITEM: {item} query result: ERROR: {str(e).rstrip()}')
         self.logger.info(129*'#' + 3*'\n')
-    '''        
-    def snmp_querier_new(self):
-        self.logger.info(50*'#' + f" Iteration number #{self.iteration_number} started " + 50*'#')
-        try:
-            result = run_proc(['snmpget', '-Oqv', '-v3', '-l', 'authPriv', '-u', 'admin', '-a', 'MD5', '-A', 'privateprivate',
-                             '-x', 'DES', '-X', 'privateprivate', self.dut_ip].extend(self.item_list), capture_output=True, encoding='utf-8')
-            if result.stdout.replace(" ", '') == '':
-                raise Exception(result.stderr)
-            self.logger.info(f'ITEM: {item} query result:  {result.stdout.rstrip()}')
-        except Exception as e:
-            self.logger.info(f'ITEM: {item} query result: ERROR: {str(e).rstrip()}')
-        self.logger.info(129*'#' + 3*'\n')
-    '''
+
     def run(self):
         self.logger.info(f"INFO : SNMP-MONITOR : run() - Thread operation started.\n\n\n")
         if not self.endtime:
