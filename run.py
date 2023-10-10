@@ -96,7 +96,7 @@ class dut_monitor():
     def logger_configurator(self) -> None:
         try:
             # initialize the logger object
-            self.dut_monitor_logger = logging.getLogger('dut_monitor')
+            self.dut_monitor_logger = logging.getLogger(f"dut_monitor_{self.start_time.strftime('%d_%b_%Y_%H_%M_%S')}")
             self.dut_monitor_logger.setLevel(logging.DEBUG)
             # initialize the file handler object
             logfile_handler = logging.FileHandler(f"logfile_dut_monitor_{self.start_time.strftime('%d_%b_%Y_%H_%M_%S')}.log")
@@ -157,16 +157,16 @@ e = dut_monitor(monitor_map=[{'dut':'15.1.1.10',
                               'items':['hm2LogTempMaximum.0','hm2PoeMgmtModuleDeliveredPower.1.1','hm2DiagCpuUtilization.0',
                                        'sysUpTime.0','hm2DiagMemoryRamFree.0','hm2LogTempMinimum.0'],
                               'interval':2,
-                              'timeout':5,
-                              #'statistics':['hm2LogTempMaximum.0','hm2PoeMgmtModuleDeliveredPower.1.1',
-                              #              'hm2DiagCpuUtilization.0','hm2DiagMemoryRamFree.0','hm2LogTempMinimum.0'],
+                              'timeout':30,
+                              'statistics':['hm2LogTempMaximum.0','hm2PoeMgmtModuleDeliveredPower.1.1',
+                                            'hm2DiagCpuUtilization.0','hm2DiagMemoryRamFree.0','hm2LogTempMinimum.0'],
                               'check_values_change':['hm2LogTempMaximum.0','hm2PoeMgmtModuleDeliveredPower.1.1',
                                                      'hm2DiagCpuUtilization.0','hm2DiagMemoryRamFree.0','hm2LogTempMinimum.0',
                                                      'pethPsePortPowerClassifications.1.8',
-                                                     'ifMauType.4.1']}])
-                              #'detect_crashes':'sysUpTime.0'}])
-                              
-e = dut_monitor(monitor_map=[{'dut':'telnet localhost 20000',
+                                                     'ifMauType.4.1'],
+                              'detect_crashes':'sysUpTime.0'}])
+sleep(2)
+f = dut_monitor(monitor_map=[{'dut':'telnet localhost 20000',
                               'utility':'console_monitor',
                               'items':[('show system info','System Description'),('show system info','System uptime'),
                                        ('show system info','Operating hours'), ('show system info','Current temperature'),
@@ -183,9 +183,10 @@ e = dut_monitor(monitor_map=[{'dut':'telnet localhost 20000',
                 
                               
 e.run()
+f.run()
 sleep(10)
 e.join_workers(dut = 'all')
-
+f.join_workers(dut = 'all')
 
 '''
 

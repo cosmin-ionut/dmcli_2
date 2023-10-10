@@ -200,7 +200,7 @@ class console_monitor(Thread):
     def run(self):
         self.logger.info(f"INFO : CLI-MONITOR : run() - Thread operation started.\n\n\n")
         if not self.endtime:
-            self.logger.info(f"WARNING : CLI-MONITOR : run() - A time limit for the monitoring process was not set.")
+            self.logger.info(f"WARNING : CLI-MONITOR : run() - A time limit for the monitoring process was not set.\n")
         while True:
             if self.endtime:
                 if not self.endtime > datetime.now():
@@ -235,7 +235,7 @@ class console_monitor(Thread):
                                       worker_type='CONSOLE_MONITOR')
         if self.detect_crashes:
             utils.crash_detector(logfile_path=self.logfile_path, uptime_item=self.profile['detect_crashes'],
-                                 uptime_type='time', worker_type='CONSOLE_MONITOR')
+                                 uptime_type='timestring', worker_type='CONSOLE_MONITOR')
         if self.check_values_change:
             utils.get_item_value_change(logfile_path=self.logfile_path, item_list=self.profile['check_values_change'],
                                         worker_type='CONSOLE_MONITOR')

@@ -60,7 +60,7 @@ class snmp_monitor(Thread):
         for item in self.item_list:
             try:
                 result = str(self.snmp_session.get(VarList(item))[0], 'UTF-8')
-                self.logger.info(f'ITEM: {item} query result:  {result.stdout.rstrip()}')
+                self.logger.info(f'ITEM: {item} query result:  {result.rstrip()}')
             except Exception as e:
                 self.logger.info(f'ITEM: {item} query result: ERROR: {str(e).rstrip()}')
         self.logger.info(129*'#' + 3*'\n')
@@ -68,7 +68,7 @@ class snmp_monitor(Thread):
     def run(self):
         self.logger.info(f"INFO : SNMP-MONITOR : run() - Thread operation started.\n\n\n")
         if not self.endtime:
-            self.logger.info(f"WARNING : SNMP-MONITOR : run() - A time limit for the monitoring process was not set.")
+            self.logger.info(f"WARNING : SNMP-MONITOR : run() - A time limit for the monitoring process was not set.\n")
         while True:
             if self.endtime:
                 if not self.endtime > datetime.now():
