@@ -185,7 +185,7 @@ f = dut_monitor(monitor_map=[{'dut':'telnet localhost 20000',
                               'check_values_change':['System Description','System uptime','Operating hours',
                                                      'Current temperature','Current humidity','CPU utilization',
                                                      'Free RAM','Network CPU interface utilization average'],
-                              'detect_crashes':'System uptime'}])              
+                              'detect_crashes':'System uptime'}])
 
 e.run()
 f.run()

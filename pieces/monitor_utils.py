@@ -25,7 +25,8 @@ class monitor_utils():
 
     def parse_logfile(self, logfile_path: str, item_dict: dict = {}, worker_type: str = 'undefined') -> None:
         """
-        Parses the logfile and populates a dictionary of {item_1:[(timestamp, value), (timestamp, 'error')], item_2:[(timestamp, value). (timestamp, value)],...}
+        Parses the logfile and populates a dictionary of {item_1:[(timestamp, value), (timestamp, 'error')],
+                                                          item_2:[(timestamp, value). (timestamp, value)],...}
         If a value can't be retrieved based on the regex pattern provided
         :logfile_path: string path to the logfile that will be parsed
         :item_dict: a dictionary of {'item':<compiled_ptrn_obj>, 'item2':<compiled_ptrn_obj>}
@@ -47,7 +48,7 @@ class monitor_utils():
 
         #  if there are, open the file in read so you can iterate through it and parse the items
         with open(logfile_path, 'r+', encoding='utf-8') as logfile:
-            
+
             logs += f'INFO : {worker_type} : parse_logfile() - Started parsing the logfile.\n'
 
             for line_nr, line in enumerate(logfile, start=1):
@@ -108,7 +109,7 @@ class monitor_utils():
                     logs += result
                 except Exception as e:
                     logs += f'\nERROR : {worker_type} : generate_statistics() - Unable to generate statistics for item {item}. Error: {e}\n'
-            
+
             logs += f"\nINFO : {worker_type} : generate_statistics() - Finished generating statistics for the items provided.\n"
 
             # iterate through the file and append the results to the dict
@@ -188,8 +189,8 @@ class monitor_utils():
         try:
             run(['which', 'telnet'], capture_output=True, check=True)
         except (FileNotFoundError, CalledProcessError):
-            return (False, 'telnet is needed to use console_monitor utility but it is not installed')         
-        
+            return (False, 'telnet is needed to use console_monitor utility but it is not installed')
+
         return True, None
 
     def _snmp_monitor_req_check_hlp(self) -> tuple:
@@ -199,16 +200,16 @@ class monitor_utils():
 
         if not util.find_spec('netsnmp'):
             return (False, 'NETSNMP PYTHON module is needed to use snmp_monitor utility')
-        
+
         return True, None
-    
+
     def get_item_value_change(self, logfile_path: str, item_list: list, worker_type: str = 'undefined') -> None:
         '''Checks whether an item had a change in value, and when did it occur.
         Verifies the item directly from self.parsed_items_dict so parse_logfile() has to be called first.
         logfile_path: the path to the logfile where the results will be written.
         item_list: the list of items whose change in values will be retrieved.
         worker_type: the utility used to monitor the DUT. For logging purposes only.'''
-        
+
         logs = f'\nINFO : {worker_type} : get_item_value_change() - Started operation.\n'
 
         for item in item_list:
