@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from threading import Thread, Event
 import logging
-from pieces.monitor_utils import monitor_utils
+from .monitor_utils import monitor_utils
 from re import compile
 from netsnmp import *
 from json import load as json_load, decoder
@@ -83,7 +83,7 @@ class snmp_monitor(Thread):
             self.thread_sleep.wait(timeout=self.profile['interval'])
         self.end_thread_processing()
         self.stopped.set()
-        
+
     def end_thread_processing(self):
         parse_items = {}
         parse_items.update(self.check_values_change)

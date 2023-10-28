@@ -4,17 +4,17 @@ import logging
 from re import search
 from time import sleep
 from pexpect import spawn, TIMEOUT, EOF, expect
-from pieces.monitor_utils import monitor_utils
+from .monitor_utils import monitor_utils
 from re import compile
 
 class console_monitor(Thread):
-    
+
     def __init__(self, profile: dict) -> None:
 
         Thread.__init__(self)
-        
+
         self.profile = profile
-        
+
         # set the endtime of the whole monitoring process 
         self.endtime = profile['start_time'] + timedelta(seconds=profile['timeout']) if profile['timeout'] else None 
         #logfile configuration
@@ -44,7 +44,7 @@ class console_monitor(Thread):
         self.daemon = True
 
     def spawn_cli_connection(self):
-        
+
         command = self.profile['dut']
         self.logger.info(f"INFO : CLI-MONITOR : spawn_cli_connection() - Spawning new CLI connection to DUT")
 
@@ -86,7 +86,7 @@ class console_monitor(Thread):
                    'Access denied',
                    'Wrong username or password',
                    'Press ENTER to get started',
-                   '.+\>$', # pre enable             
+                   '.+\>$', # pre enable
                    TIMEOUT, EOF]
 
         authentication_failure = 0
@@ -135,21 +135,21 @@ class console_monitor(Thread):
         return True
 
     def cli_querier(self):
-        
+
         self.logger.info(50*'#' + f" Iteration number #{self.iteration_number} started " + 50*'#')
 
         for item in self.item_list:
-            
+
             if not self.connection:
                 self.logger.info(f'ITEM: {item[1]} query result: ERROR:  CLI connection dead.')
                 continue # crash_detector needs the items written in the logfile for each iteration to calculate time intervals. can't use break or return
-                
+
             self.connection.send('\r')
-            
+
             if not self.clear_cli_buffer():
                 self.logger.info(f'ITEM: {item[1]} query result: ERROR:  CLI connection dead.')
                 continue
-            
+
             self.connection.send(item[0] + '\r')
             index = self.connection.expect(['--More-- or \(q\)uit', '\S\#$', TIMEOUT, EOF], timeout = 3)
 
@@ -170,7 +170,7 @@ class console_monitor(Thread):
                     continue
 
                 index = self.connection.expect(['--More-- or (q)uit', '\S\#$', TIMEOUT, EOF], timeout = 5)
-                
+
             try:
                 result = search('\.\.(-|)[^.].*', result).group(0)[2:]
                 self.logger.info(f'ITEM: {item[1]} query result:  {result.strip()}')
@@ -222,7 +222,7 @@ class console_monitor(Thread):
             self.connection.close()
         self.end_thread_processing()
         self.stopped.set()
-        
+
     def end_thread_processing(self):
         parse_items = {}
         parse_items.update(self.check_values_change)

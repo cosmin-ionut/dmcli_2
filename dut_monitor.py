@@ -1,20 +1,19 @@
 from datetime import datetime
 import logging
 from time import sleep
-from pieces.monitor_utils import monitor_utils
+from .pieces.monitor_utils import monitor_utils
 from importlib import import_module
 from random import choices
 from string import ascii_uppercase
 
-
 class dut_monitor():
-    """ 
+    """
         The main DUT monitor class.
         It's purpose is to create and manage worker thread objects.
     """
 
     def __init__(self, monitor_map: list) -> None:
-        
+
         # generate a start time for sync purposes and configure the logger
         self.start_time = datetime.now()
         self.logger_configurator()
@@ -25,7 +24,7 @@ class dut_monitor():
             self.dut_monitor_logger.critical(f"The profiles must be passed to dut_monitor in a list. dut_monitor exiting...",
                                               extra={'entity': "DUT-MONITOR : __init__()"})
             exit(1)
-        
+
         # check that the environment requirements are met and perform the module imports
         #  based on the utility that the profile uses
         utils = monitor_utils()
@@ -54,7 +53,7 @@ class dut_monitor():
         current_params = list(profile.keys())
 
         missing_items = list(set(mandatory_params) - set(current_params))
-        
+
         if missing_items:
             self.dut_monitor_logger.critical(f"The mandatory monitor parameters {missing_items} are missing from the profile.",
                                               extra={'entity': "DUT-MONITOR : profile_check()"})
@@ -99,7 +98,7 @@ class dut_monitor():
         except Exception as e:
             self.dut_monitor_logger.critical(f"Error: {e} occurred while trying to initialize {profile['utility']} worker for DUT {profile['dut']}",
                                              extra={'entity': "DUT-MONITOR : init_worker()"})
-            
+
     def logger_configurator(self) -> None:
         try:
             # generate a unique id to avoid multiple dut_monitor objects writing to the same file
@@ -120,7 +119,7 @@ class dut_monitor():
             print(f"[ {datetime.now().strftime('%d/%b/%Y %H:%M:%S')} ::: CRITICAL ::: DUT-MONITOR : logger_configurator() ] " \
                   f" {e} OCCURRED DURING LOGGER OBJECT {id} INITIALIZATION. CANNOT CONTINUE SCRIPT EXECUTION")
             exit(1)
-            
+
     def join_workers(self, dut: str, timeout:float = None) -> None:
         '''
             Wrapper method over Thread.join() that allows one or all worker threads to be join()ed to the calling thread.
@@ -141,7 +140,7 @@ class dut_monitor():
             self.dut_monitor_logger.info(f"DUT {dut} {self.workers[dut].utility} worker finished its activity or the timeout expired.", 
                                          extra={'entity': "DUT-MONITOR : join_workers()"})
         return True
-            
+
     def run(self) -> None:
         '''
         Method called to start the all the workers configured in monitor_map.
@@ -158,7 +157,7 @@ class dut_monitor():
             self.init_worker(profile=profile)
             sleep(1)
 
-
+'''
 e = dut_monitor(monitor_map=[{'dut':'15.1.1.10',
                               'utility':'snmp_monitor',
                               'items':['hm2LogTempMaximum.0','hm2PoeMgmtModuleDeliveredPower.1.1','hm2DiagCpuUtilization.0',
@@ -187,15 +186,14 @@ f = dut_monitor(monitor_map=[{'dut':'telnet localhost 20000',
                                                      'Current temperature','Current humidity','CPU utilization',
                                                      'Free RAM','Network CPU interface utilization average'],
                               'detect_crashes':'System uptime'}])              
-                
-                              
+
 e.run()
 f.run()
 sleep(10)
 e.join_workers(dut = 'all')
 f.join_workers(dut = 'all')
 
-'''
+
 
 USAGE:
 _____________
