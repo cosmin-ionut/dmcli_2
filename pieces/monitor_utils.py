@@ -83,7 +83,8 @@ class monitor_utils():
             for item in item_list:
 
                 if item not in self.parsed_items_dict:
-                    logs += f'\nERROR : {worker_type} : generate_statistics() - Item {item} is not parsed from the logfile. Make sure to execute parse_logfile(). Skipping it.\n'
+                    logs += f"\nERROR : {worker_type} : generate_statistics() - Item {item} is not parsed from the logfile. " \
+                            "Make sure to execute parse_logfile(). Skipping it.\n"
                     continue
 
                 timestamp_list = [val_tup[0] for val_tup in self.parsed_items_dict[item] if val_tup[1] != 'error']
@@ -198,11 +199,6 @@ class monitor_utils():
 
         if not util.find_spec('netsnmp'):
             return (False, 'NETSNMP PYTHON module is needed to use snmp_monitor utility')
-
-        try:
-            run(['snmpget', '-V'], capture_output=True, check=True)
-        except (FileNotFoundError, CalledProcessError):
-            return (False, 'snmpget is needed to use snmp_monitor utility but it is not installed or reported errors during version check')
         
         return True, None
     

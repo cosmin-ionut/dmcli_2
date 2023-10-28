@@ -4,6 +4,7 @@ import logging
 from pieces.monitor_utils import monitor_utils
 from re import compile
 from netsnmp import *
+from json import load as json_load, decoder
 
 class snmp_monitor(Thread):
     '''
@@ -20,13 +21,20 @@ class snmp_monitor(Thread):
         self.endtime = profile['start_time'] + timedelta(seconds=profile['timeout']) if profile['timeout'] else None 
 
         # logfile configuration
-        self.logfile_path = f"logfile_{profile['dut']}_{profile['start_time'].strftime('%d_%b_%Y_%H_%M_%S')}.log"
+        self.logfile_path = f"logfiles/logfile_{profile['dut']}_{profile['start_time'].strftime('%d_%b_%Y_%H_%M_%S')}.log"
         self.logger = logging.getLogger(profile['dut'])
         self.logger.setLevel(logging.DEBUG)
         logfile_handler = logging.FileHandler(self.logfile_path)
         fmt = logging.Formatter('%(asctime)s | %(message)s')
         logfile_handler.setFormatter(fmt)
         self.logger.addHandler(logfile_handler)
+        # import snmp settings
+        try:
+            with open('config/snmp_monitor.json', 'r') as file:
+                json_data = json_load(file)
+        except decoder.JSONDecodeError as e:
+            self.logger.info(f"CRITICAL : SNMP-MONITOR : __init__() - Failed to parse snmp_monitor.json: {e}.\n")
+            self.stop()
         # other settings
         self.item_list = list(set(profile['items'])) # can contain either OIDs or MIBs. The conversion is done to remove duplicate items
         self.iteration_number = 1 # the index of the iteration
@@ -41,16 +49,8 @@ class snmp_monitor(Thread):
         self.detect_crashes = {profile['detect_crashes']: compile("\s\s[0-9]+\s")} if 'detect_crashes' in profile else {}
         self.check_values_change = {item: compile("\s\s.+\s") for item in profile['check_values_change']} if 'check_values_change' in profile else {}
         # configure the snmp session
-        self.snmp_session = Session(DestHost=self.profile['dut'],
-        Version=3,
-        Community=None,
-        SecLevel='authPriv',
-        SecName='admin',
-        PrivProto='DES',
-        PrivPass='privateprivate',
-        AuthProto='MD5',
-        AuthPass='privateprivate',
-        UseNumeric = 1)
+        snmp_settings = json_data[profile['snmp_settings']] if 'snmp_settings' in profile else json_data['default_settings']
+        self.snmp_session = Session(DestHost=self.profile['dut'], **snmp_settings)
 
     def snmp_querier(self):
         '''

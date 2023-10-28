@@ -1,0 +1,14 @@
+{
+        "default_settings": {
+            "Version": 3,
+            "Community": "None",
+            "SecLevel": "authPriv",
+            "SecName": "admin",
+            "PrivProto": "DES",
+            "PrivPass": "privateprivate",
+            "AuthProto": "MD5",
+            "AuthPass": "privateprivate",
+            "UseNumeric": 1
+        }
+    }
+    

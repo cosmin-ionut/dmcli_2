@@ -3,7 +3,7 @@ from threading import Thread, Event
 import logging
 from re import search
 from time import sleep
-from pexpect import *# spawn, TIMEOUT, EOF, expect, sendline
+from pexpect import spawn, TIMEOUT, EOF, expect
 from pieces.monitor_utils import monitor_utils
 from re import compile
 
@@ -18,7 +18,7 @@ class console_monitor(Thread):
         # set the endtime of the whole monitoring process 
         self.endtime = profile['start_time'] + timedelta(seconds=profile['timeout']) if profile['timeout'] else None 
         #logfile configuration
-        self.logfile_path = f"logfile_cli_{profile['dut'].replace(' ','_')}_{profile['start_time'].strftime('%d_%b_%Y_%H_%M_%S')}.log"
+        self.logfile_path = f"logfiles/logfile_cli_{profile['dut'].replace(' ','_')}_{profile['start_time'].strftime('%d_%b_%Y_%H_%M_%S')}.log"
         self.logger = logging.getLogger(f"{profile['dut'].replace(' ','_')}_cli")
         self.logger.setLevel(logging.DEBUG)
         logfile_handler = logging.FileHandler(self.logfile_path)
@@ -189,7 +189,7 @@ class console_monitor(Thread):
         index = self.connection.expect([TIMEOUT, EOF], timeout= 0.1)
         if index == 0:
             if self.connection.before:
-                self.connection.expect (r'.+')  # stack overflow. No idea what this shit does but it works
+                self.connection.expect (r'.+')  # stack overflow. No idea what this does but it works
             return True
         else:
             self.logger.info(f"ERROR : CLI-MONITOR : clear_cli_buffer() - CLI connection dead.")

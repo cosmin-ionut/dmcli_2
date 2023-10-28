@@ -1,9 +1,10 @@
 from datetime import datetime
 import logging
-from sys import modules
 from time import sleep
 from pieces.monitor_utils import monitor_utils
 from importlib import import_module
+from random import choices
+from string import ascii_uppercase
 
 
 class dut_monitor():
@@ -21,7 +22,7 @@ class dut_monitor():
 
         # check that the profiles are correctly passed to the monitor
         if not isinstance(monitor_map, list):
-            self.dut_monitor_logger.critical(f"The profiles must be passed to dut_monitor in a list. dut_monitor process will exit",
+            self.dut_monitor_logger.critical(f"The profiles must be passed to dut_monitor in a list. dut_monitor exiting...",
                                               extra={'entity': "DUT-MONITOR : __init__()"})
             exit(1)
         
@@ -75,40 +76,49 @@ class dut_monitor():
         for dut in duts:
             self.dut_monitor_logger.info(f"Now stopping {dut}'s worker", extra={'entity': "DUT-MONITOR : stop_workers()"})
             self.workers[dut].stop()
-            self.dut_monitor_logger.info(f"Stop command sent to DUT {dut} {self.workers[dut].utility} worker", extra={'entity': "DUT-MONITOR : stop_workers()"})
+            self.dut_monitor_logger.info(f"Stop command sent to DUT {dut} {self.workers[dut].utility} worker",
+                                          extra={'entity': "DUT-MONITOR : stop_workers()"})
         for dut in duts:
             if self.workers[dut].is_alive():
                 self.workers[dut].stopped.wait()
-            self.dut_monitor_logger.info(f"DUT {dut} {self.workers[dut].utility} worker terminated execution.", extra={'entity': "DUT-MONITOR : stop_workers()"})
+            self.dut_monitor_logger.info(f"DUT {dut} {self.workers[dut].utility} worker terminated execution.",
+                                          extra={'entity': "DUT-MONITOR : stop_workers()"})
 
     def init_worker(self, profile: dict) -> None:
         try:
-            self.dut_monitor_logger.info(f"Trying to create {profile['utility']} type worker for DUT {profile['dut']}", extra={'entity': "DUT-MONITOR : init_worker()"})
+            self.dut_monitor_logger.info(f"Trying to create {profile['utility']} type worker for DUT {profile['dut']}",
+                                         extra={'entity': "DUT-MONITOR : init_worker()"})
             if profile['dut'] in self.workers:
-                self.dut_monitor_logger.warning(f"A worker for DUT {profile['dut']} already exists. Skip the initialization process.", extra={'entity': "DUT-MONITOR : init_worker()"})
+                self.dut_monitor_logger.warning(f"A worker for DUT {profile['dut']} already exists. Skip the initialization process.",
+                                                 extra={'entity': "DUT-MONITOR : init_worker()"})
                 return None
             self.workers[profile['dut']] = getattr(self.imported_modules[profile['utility']], profile['utility'])(profile)
             self.workers[profile['dut']].start()
-            self.dut_monitor_logger.info(f"{profile['utility']} worker for DUT {profile['dut']} created and started", extra={'entity': "DUT-MONITOR : init_worker()"})
+            self.dut_monitor_logger.info(f"{profile['utility']} worker for DUT {profile['dut']} created and started",
+                                         extra={'entity': "DUT-MONITOR : init_worker()"})
         except Exception as e:
-            self.dut_monitor_logger.critical(f"Error: {e} occurred while trying to initialize {profile['utility']} worker for DUT {profile['dut']}", extra={'entity': "DUT-MONITOR : init_worker()"})
+            self.dut_monitor_logger.critical(f"Error: {e} occurred while trying to initialize {profile['utility']} worker for DUT {profile['dut']}",
+                                             extra={'entity': "DUT-MONITOR : init_worker()"})
             
     def logger_configurator(self) -> None:
         try:
+            # generate a unique id to avoid multiple dut_monitor objects writing to the same file
+            id = ''.join(choices(ascii_uppercase, k=5))
             # initialize the logger object
-            self.dut_monitor_logger = logging.getLogger(f"dut_monitor_{self.start_time.strftime('%d_%b_%Y_%H_%M_%S')}")
+            self.dut_monitor_logger = logging.getLogger(id)
             self.dut_monitor_logger.setLevel(logging.DEBUG)
             # initialize the file handler object
-            logfile_handler = logging.FileHandler(f"logfile_dut_monitor_{self.start_time.strftime('%d_%b_%Y_%H_%M_%S')}.log")
+            logfile_handler = logging.FileHandler(f"logfiles/logfile_dut_monitor_{self.start_time.strftime('%d_%b_%Y_%H_%M_%S')}_{id}.log")
             # define a log message format
             formatter = logging.Formatter('[ %(asctime)s ::: %(levelname)s ::: %(entity)s ] - %(message)s ')
             # add the formatter to the file handler
             logfile_handler.setFormatter(formatter)
             # add the file handler to dut monitor's logger
             self.dut_monitor_logger.addHandler(logfile_handler)
-            self.dut_monitor_logger.info('Logger object initialized successfully', extra={'entity': "DUT-MONITOR : logger_configurator()"})
+            self.dut_monitor_logger.info(f'Logger object {id} initialized successfully', extra={'entity': "DUT-MONITOR : logger_configurator()"})
         except Exception as e:
-            print(f"[ {datetime.now().strftime('%d/%b/%Y %H:%M:%S')} ::: CRITICAL ::: DUT-MONITOR : logger_configurator() ] {e} OCCURRED DURING LOGGER OBJECT INITIALIZATION. CANNOT CONTINUE SCRIPT EXECUTION")
+            print(f"[ {datetime.now().strftime('%d/%b/%Y %H:%M:%S')} ::: CRITICAL ::: DUT-MONITOR : logger_configurator() ] " \
+                  f" {e} OCCURRED DURING LOGGER OBJECT {id} INITIALIZATION. CANNOT CONTINUE SCRIPT EXECUTION")
             exit(1)
             
     def join_workers(self, dut: str, timeout:float = None) -> None:
@@ -125,7 +135,8 @@ class dut_monitor():
 
         for dut in duts:
 
-            self.dut_monitor_logger.info(f"Now joining {self.workers[dut].utility} worker of DUT {dut}", extra={'entity': "DUT-MONITOR : join_workers()"})
+            self.dut_monitor_logger.info(f"Now joining {self.workers[dut].utility} worker of DUT {dut}", 
+                                         extra={'entity': "DUT-MONITOR : join_workers()"})
             self.workers[dut].join(timeout=timeout)
             self.dut_monitor_logger.info(f"DUT {dut} {self.workers[dut].utility} worker finished its activity or the timeout expired.", 
                                          extra={'entity': "DUT-MONITOR : join_workers()"})
@@ -137,19 +148,15 @@ class dut_monitor():
         Basically, this is the method that starts the monitor app.
         '''
         self.dut_monitor_logger.info(f"Operation started", extra={'entity': "DUT-MONITOR : run()"})
-        try:
-            for profile in self.monitor_map:
-                if not self.profile_check(profile):
-                    self.dut_monitor_logger.error(f"Profile {profile} failed the check, thus it is skipped.", extra={'entity': "DUT-MONITOR : run()"})
-                    continue
-                # pass the start time to all types of workers for synchronization purposes
-                profile['start_time'] = self.start_time
-                self.init_worker(profile=profile)
-                sleep(1)
-        except KeyboardInterrupt:
-            self.dut_monitor_logger.critical(f"DUT Monitor closing due to KeyboardInterrupt.", extra={'entity': "DUT-MONITOR : run()"})
-            self.stop_workers()
-            exit(1)
+        for profile in self.monitor_map:
+            if not self.profile_check(profile):
+                self.dut_monitor_logger.error(f"Profile {profile} failed the check, thus it is skipped.", 
+                                              extra={'entity': "DUT-MONITOR : run()"})
+                continue
+            # pass the start time to all types of workers for synchronization purposes
+            profile['start_time'] = self.start_time
+            self.init_worker(profile=profile)
+            sleep(1)
 
 
 e = dut_monitor(monitor_map=[{'dut':'15.1.1.10',
@@ -165,7 +172,7 @@ e = dut_monitor(monitor_map=[{'dut':'15.1.1.10',
                                                      'pethPsePortPowerClassifications.1.8',
                                                      'ifMauType.4.1'],
                               'detect_crashes':'sysUpTime.0'}])
-sleep(2)
+
 f = dut_monitor(monitor_map=[{'dut':'telnet localhost 20000',
                               'utility':'console_monitor',
                               'items':[('show system info','System Description'),('show system info','System uptime'),
