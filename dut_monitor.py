@@ -6,7 +6,7 @@ from random import choices
 from string import ascii_uppercase
 from os.path import dirname, realpath
 import sys
-sys.path.append(f"{dirname(realpath(__file__))}/pieces")
+sys.path.append(f"{dirname(realpath(__file__))}/submodules")
 from monitor_utils import monitor_utils
 
 class dut_monitor():
