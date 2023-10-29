@@ -1,10 +1,12 @@
 from datetime import datetime, timedelta
 from threading import Thread, Event
 import logging
-from .monitor_utils import monitor_utils
+from monitor_utils import monitor_utils
 from re import compile
 from netsnmp import *
 from json import load as json_load, decoder
+from os.path import dirname, realpath
+
 
 class snmp_monitor(Thread):
     '''
@@ -19,9 +21,10 @@ class snmp_monitor(Thread):
 
         # set the endtime of the whole monitoring process 
         self.endtime = profile['start_time'] + timedelta(seconds=profile['timeout']) if profile['timeout'] else None 
-
+        # path settings
+        mainDir = f"{dirname(realpath(__file__))}/.."
         # logfile configuration
-        self.logfile_path = f"logfiles/logfile_{profile['dut']}_{profile['start_time'].strftime('%d_%b_%Y_%H_%M_%S')}.log"
+        self.logfile_path = f"{mainDir}/logfiles/logfile_{profile['dut']}_{profile['start_time'].strftime('%d_%b_%Y_%H_%M_%S')}.log"
         self.logger = logging.getLogger(profile['dut'])
         self.logger.setLevel(logging.DEBUG)
         logfile_handler = logging.FileHandler(self.logfile_path)
@@ -30,7 +33,7 @@ class snmp_monitor(Thread):
         self.logger.addHandler(logfile_handler)
         # import snmp settings
         try:
-            with open('config/snmp_monitor.json', 'r') as file:
+            with open(f"{mainDir}/config/snmp_monitor.json", 'r') as file:
                 json_data = json_load(file)
         except decoder.JSONDecodeError as e:
             self.logger.info(f"CRITICAL : SNMP-MONITOR : __init__() - Failed to parse snmp_monitor.json: {e}.\n")

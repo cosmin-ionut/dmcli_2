@@ -4,8 +4,9 @@ import logging
 from re import search
 from time import sleep
 from pexpect import spawn, TIMEOUT, EOF, expect
-from .monitor_utils import monitor_utils
+from monitor_utils import monitor_utils
 from re import compile
+from os.path import dirname, realpath
 
 class console_monitor(Thread):
 
@@ -16,9 +17,12 @@ class console_monitor(Thread):
         self.profile = profile
 
         # set the endtime of the whole monitoring process 
-        self.endtime = profile['start_time'] + timedelta(seconds=profile['timeout']) if profile['timeout'] else None 
+        self.endtime = profile['start_time'] + timedelta(seconds=profile['timeout']) if profile['timeout'] else None
+        # path settings
+        mainDir = f"{dirname(realpath(__file__))}/.."
+         
         #logfile configuration
-        self.logfile_path = f"logfiles/logfile_cli_{profile['dut'].replace(' ','_')}_{profile['start_time'].strftime('%d_%b_%Y_%H_%M_%S')}.log"
+        self.logfile_path = f"{mainDir}/logfiles/logfile_cli_{profile['dut'].replace(' ','_')}_{profile['start_time'].strftime('%d_%b_%Y_%H_%M_%S')}.log"
         self.logger = logging.getLogger(f"{profile['dut'].replace(' ','_')}_cli")
         self.logger.setLevel(logging.DEBUG)
         logfile_handler = logging.FileHandler(self.logfile_path)

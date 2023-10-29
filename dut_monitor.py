@@ -1,10 +1,13 @@
 from datetime import datetime
 import logging
 from time import sleep
-from .pieces.monitor_utils import monitor_utils
 from importlib import import_module
 from random import choices
 from string import ascii_uppercase
+from os.path import dirname, realpath
+import sys
+sys.path.append(f"{dirname(realpath(__file__))}/pieces")
+from monitor_utils import monitor_utils
 
 class dut_monitor():
     """
@@ -36,7 +39,7 @@ class dut_monitor():
                 self.dut_monitor_logger.critical(f"Environment check failed with error: {message}",
                                               extra={'entity': "DUT-MONITOR : __init__()"})
                 exit(1)
-            self.imported_modules[utility] = import_module(f'pieces.{utility}')
+            self.imported_modules[utility] = import_module(utility)
             self.dut_monitor_logger.info(f"Import of the required module {utility} was successful",
                                           extra={'entity': "DUT-MONITOR : __init__()"})
 
@@ -107,7 +110,8 @@ class dut_monitor():
             self.dut_monitor_logger = logging.getLogger(id)
             self.dut_monitor_logger.setLevel(logging.DEBUG)
             # initialize the file handler object
-            logfile_handler = logging.FileHandler(f"logfiles/logfile_dut_monitor_{self.start_time.strftime('%d_%b_%Y_%H_%M_%S')}_{id}.log")
+            dirPath = dirname(realpath(__file__))
+            logfile_handler = logging.FileHandler(f"{dirPath}/logfiles/logfile_dut_monitor_{self.start_time.strftime('%d_%b_%Y_%H_%M_%S')}_{id}.log")
             # define a log message format
             formatter = logging.Formatter('[ %(asctime)s ::: %(levelname)s ::: %(entity)s ] - %(message)s ')
             # add the formatter to the file handler
@@ -157,7 +161,8 @@ class dut_monitor():
             self.init_worker(profile=profile)
             sleep(1)
 
-'''
+
+
 e = dut_monitor(monitor_map=[{'dut':'15.1.1.10',
                               'utility':'snmp_monitor',
                               'items':['hm2LogTempMaximum.0','hm2PoeMgmtModuleDeliveredPower.1.1','hm2DiagCpuUtilization.0',
@@ -171,7 +176,9 @@ e = dut_monitor(monitor_map=[{'dut':'15.1.1.10',
                                                      'pethPsePortPowerClassifications.1.8',
                                                      'ifMauType.4.1'],
                               'detect_crashes':'sysUpTime.0'}])
-
+e.run()
+e.join_workers(dut='all')
+'''
 f = dut_monitor(monitor_map=[{'dut':'telnet localhost 20000',
                               'utility':'console_monitor',
                               'items':[('show system info','System Description'),('show system info','System uptime'),
